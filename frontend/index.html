@@ -3,19 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Grand Hotel - Luxury Stay & Comfort</title>
+    <title>Grand Hotel - Luxury Stay & Experience</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
-    <!-- Header Navigation -->
+    <!-- Navigation Header -->
     <nav class="navbar">
         <a href="index.html" class="brand">
-            <span>🏨</span> GRAND HOTEL
+            <span>✨</span> GRAND HOTEL
         </a>
         <ul class="nav-links">
             <li><a href="index.html" class="active">Home</a></li>
-            <li><a href="rooms.html">Rooms</a></li>
+            <li><a href="rooms.html">Rooms & Suites</a></li>
             <li><a href="my-booking.html">My Booking</a></li>
             <li><a href="admin.html" class="admin-btn">Admin Portal</a></li>
         </ul>
@@ -23,8 +23,9 @@
 
     <!-- Hero Section -->
     <header class="hero">
-        <h1>Experience Ultimate Luxury & Comfort</h1>
-        <p>Book your stay at Grand Hotel. Powered by a high-performance C Backend & Binary Storage Engine.</p>
+        <span class="hero-tag">Five Star Luxury Experience</span>
+        <h1>Where Hospitality Meets Perfection</h1>
+        <p>Immerse yourself in world-class comfort. Driven by a high-performance C Socket Web Backend & Binary Storage Engine.</p>
 
         <!-- Search Bar Box -->
         <div class="search-box">
@@ -45,22 +46,52 @@
                     <option value="4">4 Guests</option>
                 </select>
             </div>
-            <button onclick="handleSearchRooms()" class="btn-primary">SEARCH ROOMS</button>
+            <button onclick="handleSearchRooms()" class="btn-primary">CHECK AVAILABILITY</button>
         </div>
     </header>
 
-    <!-- Featured Rooms Section -->
+    <!-- Hotel Amenities Section -->
+    <section class="container" style="padding-top: 3rem; padding-bottom: 2rem;">
+        <p class="section-subtitle">World-Class Amenities</p>
+        <h2 class="section-title">Designed For Ultimate Comfort</h2>
+
+        <div class="features-grid">
+            <div class="feature-box">
+                <span class="feature-icon">🏊‍♂️</span>
+                <h3 style="margin-bottom: 0.5rem; color: var(--text-white);">Infinity Pool</h3>
+                <p style="color: var(--text-muted); font-size: 0.9rem;">Rooftop temperature-controlled infinity pool with panoramic views.</p>
+            </div>
+            <div class="feature-box">
+                <span class="feature-icon">🍽️</span>
+                <h3 style="margin-bottom: 0.5rem; color: var(--text-white);">Fine Dining</h3>
+                <p style="color: var(--text-muted); font-size: 0.9rem;">Michelin-inspired international cuisine prepared by world-class chefs.</p>
+            </div>
+            <div class="feature-box">
+                <span class="feature-icon">💆‍♀️</span>
+                <h3 style="margin-bottom: 0.5rem; color: var(--text-white);">Wellness Spa</h3>
+                <p style="color: var(--text-muted); font-size: 0.9rem;">Holistic body treatments, sauna, and rejuvenating hydrotherapy massages.</p>
+            </div>
+            <div class="feature-box">
+                <span class="feature-icon">⚡</span>
+                <h3 style="margin-bottom: 0.5rem; color: var(--text-white);">C Backend Engine</h3>
+                <p style="color: var(--text-muted); font-size: 0.9rem;">Powered by binary record storage & standard socket HTTP networking in C.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Available Accommodations Section -->
     <main class="container">
+        <p class="section-subtitle">Exclusive Residences</p>
         <h2 class="section-title">Available Luxury Accommodations</h2>
         <div id="featured-rooms-grid" class="room-grid">
-            <p style="text-align: center; width: 100%;">Loading available rooms from C server...</p>
+            <p style="text-align: center; width: 100%; grid-column: 1/-1;">Loading available rooms from C server...</p>
         </div>
     </main>
 
     <!-- Footer -->
     <footer>
         <p>&copy; 2026 <strong>Grand Hotel Management System</strong>. All rights reserved.</p>
-        <p style="font-size: 0.8rem; margin-top: 0.5rem; color: #64748b;">Powered by C Socket HTTP Server & Binary Record Processing (CSA0203 Project).</p>
+        <p style="font-size: 0.85rem; margin-top: 0.5rem; color: var(--text-muted);">Built for CSA0203 - C Programming Course | C Backend HTTP Server (Port 8080)</p>
     </footer>
 
     <script src="js/api.js"></script>
