@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grand Hotel - Luxury Stay & Comfort</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- Header Navigation -->
+    <nav class="navbar">
+        <a href="index.html" class="brand">
+            <span>🏨</span> GRAND HOTEL
+        </a>
+        <ul class="nav-links">
+            <li><a href="index.html" class="active">Home</a></li>
+            <li><a href="rooms.html">Rooms</a></li>
+            <li><a href="my-booking.html">My Booking</a></li>
+            <li><a href="admin.html" class="admin-btn">Admin Portal</a></li>
+        </ul>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="hero">
+        <h1>Experience Ultimate Luxury & Comfort</h1>
+        <p>Book your stay at Grand Hotel. Powered by a high-performance C Backend & Binary Storage Engine.</p>
+
+        <!-- Search Bar Box -->
+        <div class="search-box">
+            <div class="form-group">
+                <label for="checkin">Check-In Date</label>
+                <input type="date" id="checkin" class="form-control">
+            </div>
+            <div class="form-group">
+                <label for="checkout">Check-Out Date</label>
+                <input type="date" id="checkout" class="form-control">
+            </div>
+            <div class="form-group">
+                <label for="guests">Guests</label>
+                <select id="guests" class="form-control">
+                    <option value="1">1 Guest</option>
+                    <option value="2" selected>2 Guests</option>
+                    <option value="3">3 Guests</option>
+                    <option value="4">4 Guests</option>
+                </select>
+            </div>
+            <button onclick="handleSearchRooms()" class="btn-primary">SEARCH ROOMS</button>
+        </div>
+    </header>
+
+    <!-- Featured Rooms Section -->
+    <main class="container">
+        <h2 class="section-title">Available Luxury Accommodations</h2>
+        <div id="featured-rooms-grid" class="room-grid">
+            <p style="text-align: center; width: 100%;">Loading available rooms from C server...</p>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2026 <strong>Grand Hotel Management System</strong>. All rights reserved.</p>
+        <p style="font-size: 0.8rem; margin-top: 0.5rem; color: #64748b;">Powered by C Socket HTTP Server & Binary Record Processing (CSA0203 Project).</p>
+    </footer>
+
+    <script src="js/api.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

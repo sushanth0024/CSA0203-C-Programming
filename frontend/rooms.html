@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Room Catalog - Grand Hotel</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- Header Navigation -->
+    <nav class="navbar">
+        <a href="index.html" class="brand">
+            <span>🏨</span> GRAND HOTEL
+        </a>
+        <ul class="nav-links">
+            <li><a href="index.html">Home</a></li>
+            <li><a href="rooms.html" class="active">Rooms</a></li>
+            <li><a href="my-booking.html">My Booking</a></li>
+            <li><a href="admin.html" class="admin-btn">Admin Portal</a></li>
+        </ul>
+    </nav>
+
+    <!-- Main Container -->
+    <main class="container">
+        <h2 class="section-title">Explore Our Hotel Rooms & Suites</h2>
+        <div id="featured-rooms-grid" class="room-grid">
+            <p style="text-align: center; width: 100%;">Loading rooms from C server...</p>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2026 <strong>Grand Hotel Management System</strong>. All rights reserved.</p>
+    </footer>
+
+    <script src="js/api.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

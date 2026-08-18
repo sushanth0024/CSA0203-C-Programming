@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Booking Confirmation - Grand Hotel</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- Header Navigation -->
+    <nav class="navbar">
+        <a href="index.html" class="brand">
+            <span>🏨</span> GRAND HOTEL
+        </a>
+        <ul class="nav-links">
+            <li><a href="index.html">Home</a></li>
+            <li><a href="rooms.html">Rooms</a></li>
+            <li><a href="my-booking.html">My Booking</a></li>
+            <li><a href="admin.html" class="admin-btn">Admin Portal</a></li>
+        </ul>
+    </nav>
+
+    <!-- Main Container -->
+    <main class="container">
+        <div class="voucher">
+            <div class="voucher-header">
+                <span style="font-size: 3rem; color: var(--success);">✓</span>
+                <h2 style="color: var(--navy-dark); font-size: 1.8rem; margin-top: 0.5rem;">BOOKING CONFIRMED</h2>
+                <p style="color: var(--text-muted);">Thank you for choosing Grand Hotel. Your reservation is secured.</p>
+            </div>
+
+            <div class="voucher-row">
+                <span>Booking ID</span>
+                <strong id="voucher-id" style="color: var(--gold-accent);">1001</strong>
+            </div>
+            <div class="voucher-row">
+                <span>Guest Name</span>
+                <strong id="voucher-name">-</strong>
+            </div>
+            <div class="voucher-row">
+                <span>Phone Number</span>
+                <strong id="voucher-phone">-</strong>
+            </div>
+            <div class="voucher-row">
+                <span>Assigned Room</span>
+                <strong id="voucher-room">-</strong>
+            </div>
+            <div class="voucher-row">
+                <span>Check-In Date</span>
+                <strong id="voucher-checkin">-</strong>
+            </div>
+            <div class="voucher-row">
+                <span>Check-Out Date</span>
+                <strong id="voucher-checkout">-</strong>
+            </div>
+            <div class="voucher-row">
+                <span>Duration</span>
+                <strong id="voucher-days">- days</strong>
+            </div>
+            <div class="voucher-row">
+                <span>Guests</span>
+                <strong id="voucher-guests">-</strong>
+            </div>
+            <div class="voucher-row">
+                <span>Booking Status</span>
+                <strong id="voucher-status" style="color: var(--gold-accent);">-</strong>
+            </div>
+
+            <div class="voucher-total">
+                <span>Estimated Room Charge</span>
+                <span id="voucher-total">₹0.00</span>
+            </div>
+
+            <div style="margin-top: 2rem; display: flex; gap: 1rem;">
+                <button onclick="window.print()" class="btn-primary" style="background: var(--navy-dark);">PRINT VOUCHER</button>
+                <a href="index.html" class="btn-primary" style="text-align: center; text-decoration: none;">BACK TO HOME</a>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2026 <strong>Grand Hotel Management System</strong>. All rights reserved.</p>
+    </footer>
+
+    <script src="js/api.js"></script>
+    <script src="js/booking.js"></script>
+</body>
+</html>

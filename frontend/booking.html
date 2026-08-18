@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Your Stay - Grand Hotel</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- Header Navigation -->
+    <nav class="navbar">
+        <a href="index.html" class="brand">
+            <span>🏨</span> GRAND HOTEL
+        </a>
+        <ul class="nav-links">
+            <li><a href="index.html">Home</a></li>
+            <li><a href="rooms.html">Rooms</a></li>
+            <li><a href="my-booking.html">My Booking</a></li>
+            <li><a href="admin.html" class="admin-btn">Admin Portal</a></li>
+        </ul>
+    </nav>
+
+    <!-- Main Container -->
+    <main class="container">
+        <div class="voucher" style="border-top-color: var(--gold-accent);">
+            <h2 class="section-title" style="margin-bottom: 1rem;">Complete Your Reservation</h2>
+            
+            <div id="booking-error" style="display: none; background: #fee2e2; color: #b91c1c; padding: 0.8rem; border-radius: 8px; margin-bottom: 1.5rem; text-align: center;"></div>
+
+            <form id="booking-form" onsubmit="submitBooking(event)">
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label for="select_room">Select Room</label>
+                    <select id="select_room" class="form-control" onchange="updateEstimatedCost()" required>
+                        <option value="">Loading available rooms...</option>
+                    </select>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label for="customer_name">Full Name</label>
+                    <input type="text" id="customer_name" class="form-control" placeholder="Enter your full name" required>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label for="phone">Phone Number</label>
+                    <input type="tel" id="phone" class="form-control" placeholder="e.g. 9876543210" required>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" class="form-control" placeholder="e.g. user@example.com" required>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                    <div class="form-group">
+                        <label for="check_in_date">Check-In Date</label>
+                        <input type="date" id="check_in_date" class="form-control" onchange="updateEstimatedCost()" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="check_out_date">Check-Out Date</label>
+                        <input type="date" id="check_out_date" class="form-control" onchange="updateEstimatedCost()" required>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <label for="guests_count">Number of Guests</label>
+                    <select id="guests_count" class="form-control" required>
+                        <option value="1">1 Guest</option>
+                        <option value="2" selected>2 Guests</option>
+                        <option value="3">3 Guests</option>
+                        <option value="4">4 Guests</option>
+                    </select>
+                </div>
+
+                <div id="cost-preview" style="background: #f1f5f9; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; font-weight: 600; text-align: center; color: var(--navy-dark);">
+                    Estimated Days: <span id="preview-days">0</span> | Total Estimated Cost: <span id="preview-total" style="color: var(--gold-accent);">₹0.00</span>
+                </div>
+
+                <button type="submit" id="submit-btn" class="btn-primary">CONFIRM BOOKING</button>
+            </form>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2026 <strong>Grand Hotel Management System</strong>. All rights reserved.</p>
+    </footer>
+
+    <script src="js/api.js"></script>
+    <script src="js/booking.js"></script>
+</body>
+</html>

@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Grand Hotel</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .admin-section {
+            background: var(--white);
+            border-radius: var(--radius);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow);
+        }
+        .action-bar {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+        }
+        .action-btn {
+            padding: 0.6rem 1.2rem;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            color: var(--white);
+        }
+        .bg-blue { background: #2563eb; }
+        .bg-green { background: #16a34a; }
+        .bg-gold { background: #d97706; }
+        .bg-purple { background: #9333ea; }
+        
+        /* Simple Modal Overlay */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.7);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+        }
+        .modal-card {
+            background: var(--white);
+            border-radius: var(--radius);
+            padding: 2rem;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: var(--shadow);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Navigation -->
+    <nav class="navbar">
+        <a href="index.html" class="brand">
+            <span>🏨</span> GRAND HOTEL <small style="font-size: 0.8rem; color: var(--gold-accent); margin-left: 5px;">[ADMIN PORTAL]</small>
+        </a>
+        <ul class="nav-links">
+            <li><a href="index.html">Home</a></li>
+            <li><a href="rooms.html">Rooms</a></li>
+            <li><a href="my-booking.html">My Booking</a></li>
+            <li><a href="admin.html" class="admin-btn">Admin Portal</a></li>
+        </ul>
+    </nav>
+
+    <!-- Main Admin Container -->
+    <main class="container">
+        <h2 class="section-title" style="text-align: left; margin-bottom: 1.5rem;">Hotel Management Dashboard</h2>
+
+        <!-- KPI Summary Cards -->
+        <div class="kpi-grid">
+            <div class="kpi-card" style="border-left-color: var(--navy-dark);">
+                <div class="kpi-label" style="color: var(--text-muted); font-size: 0.9rem; font-weight: 600;">TOTAL ROOMS</div>
+                <div id="kpi-total-rooms" class="kpi-val">0</div>
+            </div>
+            <div class="kpi-card" style="border-left-color: #16a34a;">
+                <div class="kpi-label" style="color: var(--text-muted); font-size: 0.9rem; font-weight: 600;">AVAILABLE ROOMS</div>
+                <div id="kpi-avail-rooms" class="kpi-val" style="color: #16a34a;">0</div>
+            </div>
+            <div class="kpi-card" style="border-left-color: #d97706;">
+                <div class="kpi-label" style="color: var(--text-muted); font-size: 0.9rem; font-weight: 600;">RESERVED ROOMS</div>
+                <div id="kpi-res-rooms" class="kpi-val" style="color: #d97706;">0</div>
+            </div>
+            <div class="kpi-card" style="border-left-color: #dc2626;">
+                <div class="kpi-label" style="color: var(--text-muted); font-size: 0.9rem; font-weight: 600;">OCCUPIED ROOMS</div>
+                <div id="kpi-occ-rooms" class="kpi-val" style="color: #dc2626;">0</div>
+            </div>
+            <div class="kpi-card" style="border-left-color: var(--gold-accent);">
+                <div class="kpi-label" style="color: var(--text-muted); font-size: 0.9rem; font-weight: 600;">TOTAL REVENUE</div>
+                <div id="kpi-revenue" class="kpi-val" style="color: var(--gold-accent);">₹0.00</div>
+            </div>
+        </div>
+
+        <!-- Quick Admin Actions -->
+        <div class="action-bar">
+            <button onclick="openModal('modal-add-room')" class="action-btn bg-blue">➕ Add New Room</button>
+            <button onclick="openModal('modal-checkin')" class="action-btn bg-green">🔑 Customer Check-In</button>
+            <button onclick="openModal('modal-billing')" class="action-btn bg-gold">🧾 Generate Bill</button>
+            <button onclick="openModal('modal-checkout')" class="action-btn bg-purple">🚪 Customer Check-Out</button>
+        </div>
+
+        <!-- Rooms Overview Section -->
+        <div class="admin-section">
+            <h3 style="color: var(--navy-dark); margin-bottom: 1rem;">Room Management</h3>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Room No</th>
+                            <th>Type</th>
+                            <th>Price / Night</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="admin-rooms-table">
+                        <tr><td colspan="4" style="text-align:center;">Loading rooms...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Bookings Overview Section -->
+        <div class="admin-section">
+            <h3 style="color: var(--navy-dark); margin-bottom: 1rem;">All Booking Records</h3>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Customer Name</th>
+                            <th>Phone</th>
+                            <th>Room</th>
+                            <th>Days</th>
+                            <th>Check-In</th>
+                            <th>Check-Out</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="admin-bookings-table">
+                        <tr><td colspan="8" style="text-align:center;">Loading bookings...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- MODAL: ADD ROOM -->
+    <div id="modal-add-room" class="modal-overlay">
+        <div class="modal-card">
+            <h3 style="margin-bottom: 1rem; color: var(--navy-dark);">Add New Room</h3>
+            <form onsubmit="handleAdminAddRoom(event)">
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label for="add_room_no">Room Number</label>
+                    <input type="number" id="add_room_no" class="form-control" placeholder="e.g. 401" required>
+                </div>
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label for="add_room_type">Room Type</label>
+                    <select id="add_room_type" class="form-control" required>
+                        <option value="Single">Single</option>
+                        <option value="Double" selected>Double</option>
+                        <option value="Deluxe">Deluxe</option>
+                        <option value="Suite">Suite</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <label for="add_room_price">Price Per Night (₹)</label>
+                    <input type="number" step="0.01" id="add_room_price" class="form-control" placeholder="e.g. 5000" required>
+                </div>
+                <div style="display: flex; gap: 1rem;">
+                    <button type="submit" class="btn-primary">SAVE ROOM</button>
+                    <button type="button" onclick="closeModal('modal-add-room')" class="btn-primary" style="background: #64748b;">CANCEL</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: CHECK-IN -->
+    <div id="modal-checkin" class="modal-overlay">
+        <div class="modal-card">
+            <h3 style="margin-bottom: 1rem; color: var(--navy-dark);">Customer Check-In</h3>
+            <form onsubmit="handleAdminCheckIn(event)">
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <label for="checkin_id">Booking ID</label>
+                    <input type="number" id="checkin_id" class="form-control" placeholder="e.g. 1001" required>
+                </div>
+                <div style="display: flex; gap: 1rem;">
+                    <button type="submit" class="btn-primary" style="background: #16a34a;">CONFIRM CHECK-IN</button>
+                    <button type="button" onclick="closeModal('modal-checkin')" class="btn-primary" style="background: #64748b;">CANCEL</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: BILLING -->
+    <div id="modal-billing" class="modal-overlay">
+        <div class="modal-card">
+            <h3 style="margin-bottom: 1rem; color: var(--navy-dark);">Generate / Save Bill</h3>
+            <form onsubmit="handleAdminBilling(event)">
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label for="bill_id">Booking ID</label>
+                    <input type="number" id="bill_id" class="form-control" placeholder="e.g. 1001" required>
+                </div>
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label for="bill_food">Food Charge (₹)</label>
+                    <input type="number" step="0.01" id="bill_food" class="form-control" value="0.00" required>
+                </div>
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <label for="bill_service">Service Charge (₹)</label>
+                    <input type="number" step="0.01" id="bill_service" class="form-control" value="0.00" required>
+                </div>
+                <div style="display: flex; gap: 1rem;">
+                    <button type="submit" class="btn-primary" style="background: #d97706;">CALCULATE & SAVE BILL</button>
+                    <button type="button" onclick="closeModal('modal-billing')" class="btn-primary" style="background: #64748b;">CANCEL</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: CHECK-OUT -->
+    <div id="modal-checkout" class="modal-overlay">
+        <div class="modal-card">
+            <h3 style="margin-bottom: 1rem; color: var(--navy-dark);">Customer Check-Out</h3>
+            <form onsubmit="handleAdminCheckOut(event)">
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <label for="checkout_id">Booking ID</label>
+                    <input type="number" id="checkout_id" class="form-control" placeholder="e.g. 1001" required>
+                </div>
+                <div style="display: flex; gap: 1rem;">
+                    <button type="submit" class="btn-primary" style="background: #9333ea;">CONFIRM CHECK-OUT</button>
+                    <button type="button" onclick="closeModal('modal-checkout')" class="btn-primary" style="background: #64748b;">CANCEL</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2026 <strong>Grand Hotel Management System</strong>. All rights reserved.</p>
+    </footer>
+
+    <script src="js/api.js"></script>
+    <script src="js/admin.js"></script>
+</body>
+</html>
