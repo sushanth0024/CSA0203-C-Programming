@@ -1,0 +1,11 @@
+# Compiled executables & object files
+*.exe
+*.o
+*.obj
+
+# Binary data storage files
+*.dat
+
+# Scratch / temp files
+scratch/
+temp_*.dat
