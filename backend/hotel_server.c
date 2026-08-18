@@ -607,14 +607,21 @@ void sendCorsResponse(SOCKET client_fd)
     sendHttpResponse(client_fd, 200, "text/plain", "");
 }
 
-/* Static File Host with Path Traversal Protection */
+/* Static File Host with Exact Path Traversal Protection */
 void serveStaticFile(SOCKET client_fd, const char *url_path)
 {
-    /* Path Traversal Guard */
+    /* Path Traversal & Directory Guard */
     if (strstr(url_path, "..") != NULL ||
         strstr(url_path, ".dat") != NULL ||
-        strstr(url_path, ".c") != NULL ||
         strncmp(url_path, "/backend", 8) == 0)
+    {
+        sendHttpResponse(client_fd, 403, "application/json", "{\"success\":false,\"message\":\"Access Denied\"}");
+        return;
+    }
+
+    /* Guard against serving source/executable files */
+    const char *dot = strrchr(url_path, '.');
+    if (dot && (strcmp(dot, ".c") == 0 || strcmp(dot, ".exe") == 0 || strcmp(dot, ".o") == 0))
     {
         sendHttpResponse(client_fd, 403, "application/json", "{\"success\":false,\"message\":\"Access Denied\"}");
         return;
@@ -706,12 +713,6 @@ void handleClientRequest(SOCKET client_fd, const char *request)
         body = strstr(request, "\n\n");
         if (body) body += 2;
         else body = "";
-    }
-
-    /* Log debug info */
-    if (strncmp(path, "/api", 4) == 0)
-    {
-        printf("[DEBUG API] Method: %s | Path: %s | Body: %s\n", method, path, body);
     }
 
     /* ------------------------------------------------------------------------
