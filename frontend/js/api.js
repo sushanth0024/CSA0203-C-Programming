@@ -1,101 +1,123 @@
 /* ============================================================================
-   FRONTEND API CLIENT WRAPPER - CONNECTS TO C BACKEND
+   CLIENT API WRAPPER - PHASE 4 (AUTH, RBAC, PAYMENTS, MAINTENANCE, LOGS)
    ============================================================================ */
-const API_BASE = "http://127.0.0.1:8080/api";
+
+const API_BASE_URL = 'http://127.0.0.1:8080/api';
 
 const API = {
-    // Rooms APIs
-    getRooms: async () => {
-        const res = await fetch(`${API_BASE}/rooms`);
-        return res.json();
+    // Session token management
+    getToken() {
+        return localStorage.getItem('session_token') || '';
+    },
+    setToken(token) {
+        if (token) localStorage.setItem('session_token', token);
+        else localStorage.removeItem('session_token');
+    },
+    getUser() {
+        const u = localStorage.getItem('user_info');
+        return u ? JSON.parse(u) : null;
+    },
+    setUser(user) {
+        if (user) localStorage.setItem('user_info', JSON.stringify(user));
+        else localStorage.removeItem('user_info');
     },
 
-    getAvailableRooms: async () => {
-        const res = await fetch(`${API_BASE}/rooms/available`);
-        return res.json();
+    // Base request helper with X-Session-Token header
+    async request(endpoint, options = {}) {
+        const url = `${API_BASE_URL}${endpoint}`;
+        const headers = {
+            'Content-Type': 'application/json',
+            ...(options.headers || {})
+        };
+
+        const token = this.getToken();
+        if (token) {
+            headers['X-Session-Token'] = token;
+        }
+
+        const config = {
+            ...options,
+            headers
+        };
+
+        try {
+            const response = await fetch(url, config);
+            const data = await response.json();
+            return data;
+        } catch (error) {
+            console.error(`API Error on [${endpoint}]:`, error);
+            return { success: false, message: 'Server connection failed. Please ensure C server is running on http://127.0.0.1:8080.' };
+        }
     },
 
-    addRoom: async (roomData) => {
-        const res = await fetch(`${API_BASE}/rooms/add`, {
+    // Auth
+    async login(username, password) {
+        const res = await this.request('/login', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(roomData)
+            body: JSON.stringify({ username, password })
         });
-        return res.json();
+        if (res.success) {
+            this.setToken(res.token);
+            this.setUser({ user_id: res.user_id, username: res.username, role: res.role });
+        }
+        return res;
+    },
+    async logout() {
+        const res = await this.request('/logout', { method: 'POST' });
+        this.setToken('');
+        this.setUser(null);
+        return res;
     },
 
-    // Booking APIs
-    createBooking: async (bookingData) => {
-        const res = await fetch(`${API_BASE}/bookings`, {
+    // Rooms
+    async getRooms() { return await this.request('/rooms'); },
+    async getAvailableRooms() { return await this.request('/rooms/available'); },
+    async addRoom(roomData) {
+        return await this.request('/rooms/add', { method: 'POST', body: JSON.stringify(roomData) });
+    },
+    async setMaintenance(room_no, maintenance) {
+        return await this.request('/rooms/maintenance', { method: 'POST', body: JSON.stringify({ room_no, maintenance }) });
+    },
+
+    // Bookings
+    async getAllBookings() { return await this.request('/bookings'); },
+    async createBooking(bookingData) {
+        return await this.request('/bookings', { method: 'POST', body: JSON.stringify(bookingData) });
+    },
+    async lookupBooking(booking_id, phone) {
+        return await this.request('/bookings/lookup', { method: 'POST', body: JSON.stringify({ booking_id: parseInt(booking_id), phone }) });
+    },
+    async cancelBooking(booking_id, phone) {
+        return await this.request('/bookings/cancel', { method: 'POST', body: JSON.stringify({ booking_id: parseInt(booking_id), phone }) });
+    },
+
+    // Check-In / Check-Out / Bills / Payments
+    async checkIn(booking_id) {
+        return await this.request('/checkin', { method: 'POST', body: JSON.stringify({ booking_id: parseInt(booking_id) }) });
+    },
+    async generateBill(booking_id, food_charge, service_charge) {
+        return await this.request('/bills', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(bookingData)
+            body: JSON.stringify({ booking_id: parseInt(booking_id), food_charge: parseFloat(food_charge), service_charge: parseFloat(service_charge) })
         });
-        return res.json();
     },
-
-    lookupBooking: async (bookingId, phone) => {
-        const res = await fetch(`${API_BASE}/bookings/lookup`, {
+    async recordPayment(booking_id, payment_method) {
+        return await this.request('/payments', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ booking_id: parseInt(bookingId), phone: phone })
+            body: JSON.stringify({ booking_id: parseInt(booking_id), payment_method })
         });
-        return res.json();
+    },
+    async checkOut(booking_id) {
+        return await this.request('/checkout', { method: 'POST', body: JSON.stringify({ booking_id: parseInt(booking_id) }) });
     },
 
-    cancelBooking: async (bookingId, phone) => {
-        const res = await fetch(`${API_BASE}/bookings/cancel`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ booking_id: parseInt(bookingId), phone: phone })
-        });
-        return res.json();
+    // Users & Audit Logs (Admin)
+    async getUsers() { return await this.request('/users'); },
+    async addUser(userData) {
+        return await this.request('/users/add', { method: 'POST', body: JSON.stringify(userData) });
     },
+    async getAuditLogs() { return await this.request('/audit_logs'); },
 
-    // Admin APIs
-    getAllBookings: async () => {
-        const res = await fetch(`${API_BASE}/bookings`);
-        return res.json();
-    },
-
-    checkIn: async (bookingId) => {
-        const res = await fetch(`${API_BASE}/checkin`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ booking_id: parseInt(bookingId) })
-        });
-        return res.json();
-    },
-
-    getBill: async (bookingId) => {
-        const res = await fetch(`${API_BASE}/bills/${bookingId}`);
-        return res.json();
-    },
-
-    generateBill: async (bookingId, foodCharge, serviceCharge) => {
-        const res = await fetch(`${API_BASE}/bills`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                booking_id: parseInt(bookingId),
-                food_charge: parseFloat(foodCharge || 0),
-                service_charge: parseFloat(serviceCharge || 0)
-            })
-        });
-        return res.json();
-    },
-
-    checkOut: async (bookingId) => {
-        const res = await fetch(`${API_BASE}/checkout`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ booking_id: parseInt(bookingId) })
-        });
-        return res.json();
-    },
-
-    getStats: async () => {
-        const res = await fetch(`${API_BASE}/stats`);
-        return res.json();
-    }
+    // Stats & KPIs
+    async getStats() { return await this.request('/stats'); }
 };

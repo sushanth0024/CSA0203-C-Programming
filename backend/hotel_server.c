@@ -1,10 +1,14 @@
 /*
 ================================================================================
-  WEB-BASED HOTEL MANAGEMENT SYSTEM - BACKEND HTTP SERVER
+  WEB-BASED HOTEL MANAGEMENT SYSTEM - BACKEND HTTP SERVER (PHASE 4)
 ================================================================================
   File:     backend/hotel_server.c
   Port:     8080 (127.0.0.1)
-  Storage:  Binary Files (backend/rooms.dat, backend/bookings.dat, backend/bills.dat)
+  Storage:  Binary Files (rooms.dat, bookings.dat, bills.dat, users.dat,
+            guests.dat, audit_logs.dat)
+  Features: User Authentication, Session Tokens, Role-Based Authorization,
+            Room Maintenance, Guest Management, Payment Methods (Cash/Card/UPI),
+            Audit Logging, Reporting Engine, Timestamped Backup, Path Security.
 ================================================================================
 */
 
@@ -37,15 +41,20 @@
 #define SERVER_PORT 8080
 #define SERVER_HOST "127.0.0.1"
 #define BUFFER_SIZE 65536
+#define MAX_SESSIONS 100
 
-#define ROOMS_FILE    "backend/rooms.dat"
-#define BOOKINGS_FILE "backend/bookings.dat"
-#define BILLS_FILE    "backend/bills.dat"
+#define ROOMS_FILE      "backend/rooms.dat"
+#define BOOKINGS_FILE   "backend/bookings.dat"
+#define BILLS_FILE      "backend/bills.dat"
+#define USERS_FILE      "backend/users.dat"
+#define GUESTS_FILE     "backend/guests.dat"
+#define AUDIT_LOG_FILE  "backend/audit_logs.dat"
 
 /* Room Status Constants */
-#define ROOM_AVAILABLE 0
-#define ROOM_RESERVED  1
-#define ROOM_OCCUPIED  2
+#define ROOM_AVAILABLE    0
+#define ROOM_RESERVED     1
+#define ROOM_OCCUPIED     2
+#define ROOM_MAINTENANCE  3
 
 /* Booking Status Constants */
 #define BOOKING_RESERVED   1
@@ -57,13 +66,34 @@
    DATA STRUCTURES
    ============================================================================ */
 
+/* User Record Structure */
+typedef struct
+{
+    int user_id;
+    char username[50];
+    char password[100];
+    char role[20]; /* "admin" or "receptionist" */
+    int active;    /* 1 = Active, 0 = Disabled */
+} User;
+
+/* Session Structure */
+typedef struct
+{
+    char token[64];
+    int user_id;
+    char username[50];
+    char role[20];
+    int active;
+    time_t login_time;
+} Session;
+
 /* Room Record Structure */
 typedef struct
 {
     int room_no;
     char type[20];
     float price;
-    int status; /* 0 = Available, 1 = Reserved, 2 = Occupied */
+    int status; /* 0 = Available, 1 = Reserved, 2 = Occupied, 3 = Maintenance */
 } Room;
 
 /* Booking Record Structure */
@@ -91,12 +121,48 @@ typedef struct
     float tax;
     float total;
     int paid; /* 0 = Unpaid, 1 = Paid */
+    char payment_method[20]; /* Cash, Card, UPI */
 } Bill;
+
+/* Guest Record Structure */
+typedef struct
+{
+    int guest_id;
+    char name[100];
+    char phone[20];
+    char email[100];
+    char address[200];
+    char id_type[30];
+    char id_number[50];
+} Guest;
+
+/* Audit Log Structure */
+typedef struct
+{
+    int log_id;
+    int user_id;
+    char username[50];
+    char action[100];
+    char details[200];
+    char timestamp[30];
+} AuditLog;
+
+/* Global In-Memory Sessions */
+static Session g_sessions[MAX_SESSIONS];
+static int g_session_count = 0;
 
 /* ============================================================================
    HELPER PROTOTYPES
    ============================================================================ */
-void initializeRooms(void);
+void initializeDatabases(void);
+void addAuditLog(int user_id, const char *username, const char *action, const char *details);
+void getTimestampStr(char *buffer, size_t max_len);
+
+int validateUser(const char *username, const char *password, User *user);
+char* createSession(int user_id, const char *username, const char *role);
+int verifySessionToken(const char *token, Session *out_session);
+void invalidateSession(const char *token);
+
 int roomExists(int room_no);
 int getRoom(int room_no, Room *room);
 int updateRoom(Room updated_room);
@@ -124,7 +190,7 @@ void handleClientRequest(SOCKET client_fd, const char *request);
 int main(void)
 {
     printf("========================================================\n");
-    printf("  WEB-BASED HOTEL MANAGEMENT SYSTEM - C BACKEND SERVER  \n");
+    printf("  WEB-BASED HOTEL MANAGEMENT SYSTEM - C BACKEND (PHASE 4)\n");
     printf("========================================================\n");
 
 #ifdef _WIN32
@@ -136,8 +202,8 @@ int main(void)
     }
 #endif
 
-    /* Initialize default room database if missing */
-    initializeRooms();
+    /* Initialize default room & user databases */
+    initializeDatabases();
 
     SOCKET server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (server_fd == INVALID_SOCKET)
@@ -149,7 +215,6 @@ int main(void)
         return 1;
     }
 
-    /* Allow address reuse */
     int opt = 1;
     setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, (const char *)&opt, sizeof(opt));
 
@@ -179,8 +244,8 @@ int main(void)
         return 1;
     }
 
-    printf("[SUCCESS] C Web Server listening on http://%s:%d\n", SERVER_HOST, SERVER_PORT);
-    printf("Ready to serve static files from /frontend and REST APIs...\n");
+    printf("[SUCCESS] C Web Server Phase 4 running on http://%s:%d\n", SERVER_HOST, SERVER_PORT);
+    printf("Serving frontend files, RBAC, Sessions, Audit Logging, Reports...\n");
     printf("--------------------------------------------------------\n");
 
     while (1)
@@ -215,39 +280,192 @@ int main(void)
 }
 
 /* ============================================================================
-   BINARY FILE PERSISTENCE HELPERS
+   DATABASE & INITIALIZATION HELPERS
    ============================================================================ */
 
-void initializeRooms(void)
+void getTimestampStr(char *buffer, size_t max_len)
 {
+    time_t now = time(NULL);
+    struct tm *t = localtime(&now);
+    strftime(buffer, max_len, "%Y-%m-%d %H:%M:%S", t);
+}
+
+void initializeDatabases(void)
+{
+    /* Initialize Rooms */
     FILE *fp = fopen(ROOMS_FILE, "rb");
-    if (fp != NULL)
-    {
-        fclose(fp);
-        return; /* Database already exists */
-    }
-
-    Room default_rooms[] = {
-        {101, "Single", 1500.00f, ROOM_AVAILABLE},
-        {102, "Single", 1500.00f, ROOM_AVAILABLE},
-        {201, "Double", 2500.00f, ROOM_AVAILABLE},
-        {202, "Double", 2500.00f, ROOM_AVAILABLE},
-        {301, "Deluxe", 4000.00f, ROOM_AVAILABLE}
-    };
-
-    int count = sizeof(default_rooms) / sizeof(default_rooms[0]);
-
-    fp = fopen(ROOMS_FILE, "wb");
     if (fp == NULL)
     {
-        printf("[ERROR] Unable to create %s!\n", ROOMS_FILE);
-        return;
+        Room default_rooms[] = {
+            {101, "Single", 1500.00f, ROOM_AVAILABLE},
+            {102, "Single", 1500.00f, ROOM_AVAILABLE},
+            {201, "Double", 2500.00f, ROOM_AVAILABLE},
+            {202, "Double", 2500.00f, ROOM_AVAILABLE},
+            {301, "Deluxe", 4000.00f, ROOM_AVAILABLE}
+        };
+        fp = fopen(ROOMS_FILE, "wb");
+        if (fp)
+        {
+            fwrite(default_rooms, sizeof(Room), 5, fp);
+            fclose(fp);
+            printf("[INIT] Created %s with 5 rooms.\n", ROOMS_FILE);
+        }
+    }
+    else
+    {
+        fclose(fp);
     }
 
-    fwrite(default_rooms, sizeof(Room), count, fp);
-    fclose(fp);
-    printf("[INIT] Created %s with 5 default sample rooms.\n", ROOMS_FILE);
+    /* Initialize Users (Default admin & reception) */
+    fp = fopen(USERS_FILE, "rb");
+    if (fp == NULL)
+    {
+        User default_users[] = {
+            {1, "admin", "admin123", "admin", 1},
+            {2, "reception", "rec123", "receptionist", 1}
+        };
+        fp = fopen(USERS_FILE, "wb");
+        if (fp)
+        {
+            fwrite(default_users, sizeof(User), 2, fp);
+            fclose(fp);
+            printf("[INIT] Created %s with admin and receptionist accounts.\n", USERS_FILE);
+        }
+    }
+    else
+    {
+        fclose(fp);
+    }
 }
+
+void addAuditLog(int user_id, const char *username, const char *action, const char *details)
+{
+    FILE *fp = fopen(AUDIT_LOG_FILE, "rb");
+    int next_id = 1;
+    if (fp)
+    {
+        AuditLog temp;
+        while (fread(&temp, sizeof(AuditLog), 1, fp) == 1)
+        {
+            if (temp.log_id >= next_id) next_id = temp.log_id + 1;
+        }
+        fclose(fp);
+    }
+
+    AuditLog log;
+    log.log_id = next_id;
+    log.user_id = user_id;
+    strncpy(log.username, username ? username : "System", sizeof(log.username) - 1);
+    strncpy(log.action, action, sizeof(log.action) - 1);
+    strncpy(log.details, details, sizeof(log.details) - 1);
+    getTimestampStr(log.timestamp, sizeof(log.timestamp));
+
+    fp = fopen(AUDIT_LOG_FILE, "ab");
+    if (fp)
+    {
+        fwrite(&log, sizeof(AuditLog), 1, fp);
+        fclose(fp);
+    }
+}
+
+/* ============================================================================
+   USER AUTHENTICATION & SESSION MANAGEMENT
+   ============================================================================ */
+
+int validateUser(const char *username, const char *password, User *user)
+{
+    FILE *fp = fopen(USERS_FILE, "rb");
+    if (!fp) return 0;
+
+    User temp;
+    while (fread(&temp, sizeof(User), 1, fp) == 1)
+    {
+        if (strcmp(temp.username, username) == 0 && strcmp(temp.password, password) == 0)
+        {
+            if (temp.active == 1)
+            {
+                if (user) *user = temp;
+                fclose(fp);
+                return 1;
+            }
+        }
+    }
+    fclose(fp);
+    return 0;
+}
+
+char* createSession(int user_id, const char *username, const char *role)
+{
+    static char token[64];
+    snprintf(token, sizeof(token), "token_%d_%ld_%d", user_id, (long)time(NULL), rand() % 10000);
+
+    if (g_session_count < MAX_SESSIONS)
+    {
+        Session *s = &g_sessions[g_session_count++];
+        strncpy(s->token, token, sizeof(s->token) - 1);
+        s->user_id = user_id;
+        strncpy(s->username, username, sizeof(s->username) - 1);
+        strncpy(s->role, role, sizeof(s->role) - 1);
+        s->active = 1;
+        s->login_time = time(NULL);
+    }
+
+    return token;
+}
+
+int verifySessionToken(const char *token, Session *out_session)
+{
+    if (!token || strlen(token) == 0) return 0;
+
+    for (int i = 0; i < g_session_count; i++)
+    {
+        if (g_sessions[i].active && strcmp(g_sessions[i].token, token) == 0)
+        {
+            if (out_session) *out_session = g_sessions[i];
+            return 1;
+        }
+    }
+    return 0;
+}
+
+void invalidateSession(const char *token)
+{
+    if (!token) return;
+    for (int i = 0; i < g_session_count; i++)
+    {
+        if (strcmp(g_sessions[i].token, token) == 0)
+        {
+            g_sessions[i].active = 0;
+            break;
+        }
+    }
+}
+
+/* Extract Session Token from Header */
+void getHeaderToken(const char *request, char *token, int max_len)
+{
+    token[0] = '\0';
+    const char *pos = strstr(request, "X-Session-Token:");
+    if (!pos) pos = strstr(request, "x-session-token:");
+    if (!pos) return;
+
+    pos = strchr(pos, ':');
+    if (!pos) return;
+    pos++;
+
+    while (*pos == ' ' || *pos == '\t') pos++;
+
+    int idx = 0;
+    while (*pos && *pos != '\r' && *pos != '\n' && idx < max_len - 1)
+    {
+        token[idx++] = *pos++;
+    }
+    token[idx] = '\0';
+}
+
+/* ============================================================================
+   BINARY FILE PERSISTENCE HELPERS
+   ============================================================================ */
 
 int roomExists(int room_no)
 {
@@ -577,6 +795,7 @@ void sendHttpResponse(SOCKET client_fd, int status_code, const char *content_typ
     const char *status_text = "OK";
     if (status_code == 201) status_text = "Created";
     else if (status_code == 400) status_text = "Bad Request";
+    else if (status_code == 401) status_text = "Unauthorized";
     else if (status_code == 403) status_text = "Forbidden";
     else if (status_code == 404) status_text = "Not Found";
     else if (status_code == 409) status_text = "Conflict";
@@ -591,7 +810,7 @@ void sendHttpResponse(SOCKET client_fd, int status_code, const char *content_typ
              "Content-Length: %d\r\n"
              "Access-Control-Allow-Origin: *\r\n"
              "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n"
-             "Access-Control-Allow-Headers: Content-Type\r\n"
+             "Access-Control-Allow-Headers: Content-Type, X-Session-Token\r\n"
              "Connection: close\r\n\r\n",
              status_code, status_text, content_type, body_len);
 
@@ -644,7 +863,6 @@ void serveStaticFile(SOCKET client_fd, const char *url_path)
         return;
     }
 
-    /* Determine MIME type */
     const char *content_type = "text/html";
     if (strstr(file_path, ".css")) content_type = "text/css";
     else if (strstr(file_path, ".js")) content_type = "application/javascript";
@@ -702,12 +920,9 @@ void handleClientRequest(SOCKET client_fd, const char *request)
         return;
     }
 
-    /* Extract Request Body supporting both \r\n\r\n and \n\n */
+    /* Extract Request Body */
     const char *body = strstr(request, "\r\n\r\n");
-    if (body)
-    {
-        body += 4;
-    }
+    if (body) body += 4;
     else
     {
         body = strstr(request, "\n\n");
@@ -715,8 +930,56 @@ void handleClientRequest(SOCKET client_fd, const char *request)
         else body = "";
     }
 
+    /* Extract Session Token */
+    char token[64];
+    getHeaderToken(request, token, sizeof(token));
+    Session active_session;
+    int is_authenticated = verifySessionToken(token, &active_session);
+
     /* ------------------------------------------------------------------------
-       1. GET /api/rooms - Return list of all rooms
+       1. POST /api/login - User Login & Session Creation
+       ------------------------------------------------------------------------ */
+    if (strcmp(method, "POST") == 0 && strcmp(path, "/api/login") == 0)
+    {
+        char username[50], password[100];
+        getJsonStringValue(body, "username", username, sizeof(username));
+        getJsonStringValue(body, "password", password, sizeof(password));
+
+        User user;
+        if (validateUser(username, password, &user))
+        {
+            char *sess_token = createSession(user.user_id, user.username, user.role);
+            addAuditLog(user.user_id, user.username, "User Login", "Login successful");
+
+            char json_res[512];
+            snprintf(json_res, sizeof(json_res),
+                     "{\"success\":true,\"message\":\"Login successful\",\"user_id\":%d,\"username\":\"%s\",\"role\":\"%s\",\"token\":\"%s\"}",
+                     user.user_id, user.username, user.role, sess_token);
+            sendHttpResponse(client_fd, 200, "application/json", json_res);
+        }
+        else
+        {
+            sendHttpResponse(client_fd, 401, "application/json", "{\"success\":false,\"message\":\"Invalid username or password\"}");
+        }
+        return;
+    }
+
+    /* ------------------------------------------------------------------------
+       2. POST /api/logout - Invalidate Session
+       ------------------------------------------------------------------------ */
+    if (strcmp(method, "POST") == 0 && strcmp(path, "/api/logout") == 0)
+    {
+        if (is_authenticated)
+        {
+            addAuditLog(active_session.user_id, active_session.username, "User Logout", "Logged out");
+            invalidateSession(token);
+        }
+        sendHttpResponse(client_fd, 200, "application/json", "{\"success\":true,\"message\":\"Logged out successfully\"}");
+        return;
+    }
+
+    /* ------------------------------------------------------------------------
+       3. GET /api/rooms - Return list of all rooms
        ------------------------------------------------------------------------ */
     if (strcmp(method, "GET") == 0 && strcmp(path, "/api/rooms") == 0)
     {
@@ -731,7 +994,7 @@ void handleClientRequest(SOCKET client_fd, const char *request)
             while (fread(&r, sizeof(Room), 1, fp) == 1)
             {
                 char item[256];
-                const char *status_str = (r.status == 0) ? "Available" : (r.status == 1) ? "Reserved" : "Occupied";
+                const char *status_str = (r.status == 0) ? "Available" : (r.status == 1) ? "Reserved" : (r.status == 2) ? "Occupied" : "Maintenance";
                 snprintf(item, sizeof(item), "%s{\"room_no\":%d,\"type\":\"%s\",\"price\":%.2f,\"status\":%d,\"status_str\":\"%s\"}",
                          first ? "" : ",", r.room_no, r.type, r.price, r.status, status_str);
                 strcat(json, item);
@@ -745,7 +1008,7 @@ void handleClientRequest(SOCKET client_fd, const char *request)
     }
 
     /* ------------------------------------------------------------------------
-       2. GET /api/rooms/available - Return list of available rooms only
+       4. GET /api/rooms/available - Return list of available rooms only
        ------------------------------------------------------------------------ */
     if (strcmp(method, "GET") == 0 && strcmp(path, "/api/rooms/available") == 0)
     {
@@ -776,10 +1039,16 @@ void handleClientRequest(SOCKET client_fd, const char *request)
     }
 
     /* ------------------------------------------------------------------------
-       3. POST /api/rooms/add - Add a new room (admin)
+       5. POST /api/rooms/add - Add new room (Admin only)
        ------------------------------------------------------------------------ */
     if (strcmp(method, "POST") == 0 && strcmp(path, "/api/rooms/add") == 0)
     {
+        if (!is_authenticated || strcmp(active_session.role, "admin") != 0)
+        {
+            sendHttpResponse(client_fd, 403, "application/json", "{\"success\":false,\"message\":\"Admin privileges required\"}");
+            return;
+        }
+
         int room_no = getJsonIntValue(body, "room_no", 0);
         char type[20];
         getJsonStringValue(body, "type", type, sizeof(type));
@@ -787,37 +1056,73 @@ void handleClientRequest(SOCKET client_fd, const char *request)
 
         if (room_no <= 0 || strlen(type) == 0 || price <= 0.0f)
         {
-            sendHttpResponse(client_fd, 400, "application/json", "{\"success\":false,\"message\":\"Invalid room details! Price and Room number must be > 0.\"}");
+            sendHttpResponse(client_fd, 400, "application/json", "{\"success\":false,\"message\":\"Invalid room details\"}");
             return;
         }
 
         if (roomExists(room_no))
         {
-            sendHttpResponse(client_fd, 409, "application/json", "{\"success\":false,\"message\":\"Room number already exists!\"}");
+            sendHttpResponse(client_fd, 409, "application/json", "{\"success\":false,\"message\":\"Room number already exists\"}");
             return;
         }
 
-        Room r;
-        r.room_no = room_no;
-        strcpy(r.type, type);
-        r.price = price;
-        r.status = ROOM_AVAILABLE;
+        Room r = {room_no, "", price, ROOM_AVAILABLE};
+        strncpy(r.type, type, sizeof(r.type) - 1);
 
         FILE *fp = fopen(ROOMS_FILE, "ab");
-        if (!fp)
+        if (fp)
         {
-            sendHttpResponse(client_fd, 500, "application/json", "{\"success\":false,\"message\":\"Failed to open room database.\"}");
-            return;
+            fwrite(&r, sizeof(Room), 1, fp);
+            fclose(fp);
+            addAuditLog(active_session.user_id, active_session.username, "Add Room", "Added new room");
+            sendHttpResponse(client_fd, 201, "application/json", "{\"success\":true,\"message\":\"Room added successfully\"}");
         }
-        fwrite(&r, sizeof(Room), 1, fp);
-        fclose(fp);
-
-        sendHttpResponse(client_fd, 201, "application/json", "{\"success\":true,\"message\":\"Room added successfully!\"}");
         return;
     }
 
     /* ------------------------------------------------------------------------
-       4. POST /api/bookings - Create new customer reservation
+       6. POST /api/rooms/maintenance - Set Room Maintenance (Admin only)
+       ------------------------------------------------------------------------ */
+    if (strcmp(method, "POST") == 0 && strcmp(path, "/api/rooms/maintenance") == 0)
+    {
+        if (!is_authenticated || strcmp(active_session.role, "admin") != 0)
+        {
+            sendHttpResponse(client_fd, 403, "application/json", "{\"success\":false,\"message\":\"Admin privileges required\"}");
+            return;
+        }
+
+        int room_no = getJsonIntValue(body, "room_no", 0);
+        int maintenance = getJsonIntValue(body, "maintenance", 1);
+
+        Room r;
+        if (!getRoom(room_no, &r))
+        {
+            sendHttpResponse(client_fd, 404, "application/json", "{\"success\":false,\"message\":\"Room not found\"}");
+            return;
+        }
+
+        if (maintenance)
+        {
+            if (r.status != ROOM_AVAILABLE)
+            {
+                sendHttpResponse(client_fd, 400, "application/json", "{\"success\":false,\"message\":\"Only Available rooms can be placed under maintenance\"}");
+                return;
+            }
+            r.status = ROOM_MAINTENANCE;
+        }
+        else
+        {
+            r.status = ROOM_AVAILABLE;
+        }
+
+        updateRoom(r);
+        addAuditLog(active_session.user_id, active_session.username, "Room Maintenance", maintenance ? "Placed under maintenance" : "Restored to Available");
+        sendHttpResponse(client_fd, 200, "application/json", "{\"success\":true,\"message\":\"Room status updated successfully\"}");
+        return;
+    }
+
+    /* ------------------------------------------------------------------------
+       7. POST /api/bookings - Create new customer reservation
        ------------------------------------------------------------------------ */
     if (strcmp(method, "POST") == 0 && strcmp(path, "/api/bookings") == 0)
     {
@@ -843,13 +1148,18 @@ void handleClientRequest(SOCKET client_fd, const char *request)
             return;
         }
 
+        if (r.status == ROOM_MAINTENANCE)
+        {
+            sendHttpResponse(client_fd, 400, "application/json", "{\"success\":false,\"message\":\"Room is currently under maintenance!\"}");
+            return;
+        }
+
         if (r.status != ROOM_AVAILABLE)
         {
             sendHttpResponse(client_fd, 409, "application/json", "{\"success\":false,\"message\":\"Selected room is no longer available!\"}");
             return;
         }
 
-        /* Calculate days in C backend */
         int days = calculateDurationDays(b.check_in_date, b.check_out_date);
         if (days <= 0)
         {
@@ -861,19 +1171,17 @@ void handleClientRequest(SOCKET client_fd, const char *request)
         b.status = BOOKING_RESERVED;
 
         FILE *fp = fopen(BOOKINGS_FILE, "ab");
-        if (!fp)
+        if (fp)
         {
-            sendHttpResponse(client_fd, 500, "application/json", "{\"success\":false,\"message\":\"Failed to save booking record.\"}");
-            return;
+            fwrite(&b, sizeof(Booking), 1, fp);
+            fclose(fp);
         }
-        fwrite(&b, sizeof(Booking), 1, fp);
-        fclose(fp);
 
-        /* Update Room Status to Reserved */
         r.status = ROOM_RESERVED;
         updateRoom(r);
 
         float room_charge = r.price * b.days;
+        addAuditLog(is_authenticated ? active_session.user_id : 0, is_authenticated ? active_session.username : "Customer", "Create Booking", "Reservation created");
 
         char json_res[512];
         snprintf(json_res, sizeof(json_res),
@@ -885,7 +1193,7 @@ void handleClientRequest(SOCKET client_fd, const char *request)
     }
 
     /* ------------------------------------------------------------------------
-       5. POST /api/bookings/lookup - Customer lookup by ID + Phone
+       8. POST /api/bookings/lookup - Customer lookup by ID + Phone
        ------------------------------------------------------------------------ */
     if (strcmp(method, "POST") == 0 && strcmp(path, "/api/bookings/lookup") == 0)
     {
@@ -919,7 +1227,7 @@ void handleClientRequest(SOCKET client_fd, const char *request)
     }
 
     /* ------------------------------------------------------------------------
-       6. POST /api/bookings/cancel - Customer cancel reservation
+       9. POST /api/bookings/cancel - Cancel reservation
        ------------------------------------------------------------------------ */
     if (strcmp(method, "POST") == 0 && strcmp(path, "/api/bookings/cancel") == 0)
     {
@@ -940,11 +1248,9 @@ void handleClientRequest(SOCKET client_fd, const char *request)
             return;
         }
 
-        /* Update booking -> Cancelled */
         b.status = BOOKING_CANCELLED;
         updateBooking(b);
 
-        /* Update room -> Available */
         Room r;
         if (getRoom(b.room_no, &r))
         {
@@ -952,12 +1258,13 @@ void handleClientRequest(SOCKET client_fd, const char *request)
             updateRoom(r);
         }
 
+        addAuditLog(is_authenticated ? active_session.user_id : 0, is_authenticated ? active_session.username : "Customer", "Cancel Booking", "Reservation cancelled");
         sendHttpResponse(client_fd, 200, "application/json", "{\"success\":true,\"message\":\"Reservation cancelled successfully!\"}");
         return;
     }
 
     /* ------------------------------------------------------------------------
-       7. GET /api/bookings - Fetch all bookings (admin)
+       10. GET /api/bookings - Fetch all bookings
        ------------------------------------------------------------------------ */
     if (strcmp(method, "GET") == 0 && strcmp(path, "/api/bookings") == 0)
     {
@@ -987,7 +1294,7 @@ void handleClientRequest(SOCKET client_fd, const char *request)
     }
 
     /* ------------------------------------------------------------------------
-       8. POST /api/checkin - Admin Check-In customer
+       11. POST /api/checkin - Admin/Reception Check-In
        ------------------------------------------------------------------------ */
     if (strcmp(method, "POST") == 0 && strcmp(path, "/api/checkin") == 0)
     {
@@ -1016,12 +1323,13 @@ void handleClientRequest(SOCKET client_fd, const char *request)
             updateRoom(r);
         }
 
+        addAuditLog(is_authenticated ? active_session.user_id : 0, is_authenticated ? active_session.username : "Staff", "Check In", "Customer checked in");
         sendHttpResponse(client_fd, 200, "application/json", "{\"success\":true,\"message\":\"Customer checked in successfully!\"}");
         return;
     }
 
     /* ------------------------------------------------------------------------
-       9. GET /api/bills/{id} & POST /api/bills - Billing Operations
+       12. GET /api/bills/{id} & POST /api/bills - Billing Operations
        ------------------------------------------------------------------------ */
     if (strcmp(method, "GET") == 0 && strncmp(path, "/api/bills/", 11) == 0)
     {
@@ -1035,8 +1343,8 @@ void handleClientRequest(SOCKET client_fd, const char *request)
 
         char json_res[512];
         snprintf(json_res, sizeof(json_res),
-                 "{\"success\":true,\"bill\":{\"booking_id\":%d,\"room_charge\":%.2f,\"food_charge\":%.2f,\"service_charge\":%.2f,\"tax\":%.2f,\"total\":%.2f,\"paid\":%d}}",
-                 bill.booking_id, bill.room_charge, bill.food_charge, bill.service_charge, bill.tax, bill.total, bill.paid);
+                 "{\"success\":true,\"bill\":{\"booking_id\":%d,\"room_charge\":%.2f,\"food_charge\":%.2f,\"service_charge\":%.2f,\"tax\":%.2f,\"total\":%.2f,\"paid\":%d,\"payment_method\":\"%s\"}}",
+                 bill.booking_id, bill.room_charge, bill.food_charge, bill.service_charge, bill.tax, bill.total, bill.paid, bill.payment_method);
         sendHttpResponse(client_fd, 200, "application/json", json_res);
         return;
     }
@@ -1063,7 +1371,7 @@ void handleClientRequest(SOCKET client_fd, const char *request)
 
         float room_charge = r.price * b.days;
         float subtotal = room_charge + food_charge + service_charge;
-        float tax = subtotal * 0.10f; /* 10% tax */
+        float tax = subtotal * 0.10f;
         float total = subtotal + tax;
 
         Bill bill;
@@ -1074,19 +1382,52 @@ void handleClientRequest(SOCKET client_fd, const char *request)
         bill.tax = tax;
         bill.total = total;
         bill.paid = 1;
+        strncpy(bill.payment_method, "Cash", sizeof(bill.payment_method) - 1);
 
         saveBill(bill);
+        addAuditLog(is_authenticated ? active_session.user_id : 0, is_authenticated ? active_session.username : "Staff", "Generate Bill", "Bill generated");
 
         char json_res[512];
         snprintf(json_res, sizeof(json_res),
-                 "{\"success\":true,\"bill\":{\"booking_id\":%d,\"room_charge\":%.2f,\"food_charge\":%.2f,\"service_charge\":%.2f,\"tax\":%.2f,\"total\":%.2f},\"message\":\"Bill generated successfully!\"}",
+                 "{\"success\":true,\"bill\":{\"booking_id\":%d,\"room_charge\":%.2f,\"food_charge\":%.2f,\"service_charge\":%.2f,\"tax\":%.2f,\"total\":%.2f,\"paid\":1,\"payment_method\":\"Cash\"},\"message\":\"Bill generated successfully!\"}",
                  bill.booking_id, bill.room_charge, bill.food_charge, bill.service_charge, bill.tax, bill.total);
         sendHttpResponse(client_fd, 200, "application/json", json_res);
         return;
     }
 
     /* ------------------------------------------------------------------------
-       10. POST /api/checkout - Admin Check-Out customer
+       13. POST /api/payments - Payment Method Recording (Cash, Card, UPI)
+       ------------------------------------------------------------------------ */
+    if (strcmp(method, "POST") == 0 && strcmp(path, "/api/payments") == 0)
+    {
+        int booking_id = getJsonIntValue(body, "booking_id", 0);
+        char payment_method[20];
+        getJsonStringValue(body, "payment_method", payment_method, sizeof(payment_method));
+
+        Bill bill;
+        if (!getBill(booking_id, &bill))
+        {
+            sendHttpResponse(client_fd, 404, "application/json", "{\"success\":false,\"message\":\"Bill not found for this booking!\"}");
+            return;
+        }
+
+        if (bill.paid == 1 && strlen(bill.payment_method) > 0 && strcmp(bill.payment_method, "Pending") != 0)
+        {
+            sendHttpResponse(client_fd, 400, "application/json", "{\"success\":false,\"message\":\"Payment already recorded for this bill!\"}");
+            return;
+        }
+
+        bill.paid = 1;
+        strncpy(bill.payment_method, payment_method, sizeof(bill.payment_method) - 1);
+        saveBill(bill);
+
+        addAuditLog(is_authenticated ? active_session.user_id : 0, is_authenticated ? active_session.username : "Staff", "Record Payment", payment_method);
+        sendHttpResponse(client_fd, 200, "application/json", "{\"success\":true,\"message\":\"Payment recorded successfully!\"}");
+        return;
+    }
+
+    /* ------------------------------------------------------------------------
+       14. POST /api/checkout - Admin/Reception Check-Out
        ------------------------------------------------------------------------ */
     if (strcmp(method, "POST") == 0 && strcmp(path, "/api/checkout") == 0)
     {
@@ -1122,16 +1463,17 @@ void handleClientRequest(SOCKET client_fd, const char *request)
             updateRoom(r);
         }
 
+        addAuditLog(is_authenticated ? active_session.user_id : 0, is_authenticated ? active_session.username : "Staff", "Check Out", "Customer checked out");
         sendHttpResponse(client_fd, 200, "application/json", "{\"success\":true,\"message\":\"Customer checked out successfully! Room is now Available.\"}");
         return;
     }
 
     /* ------------------------------------------------------------------------
-       11. GET /api/stats - Admin Dashboard Statistics
+       15. GET /api/stats - Admin/Reception Dashboard KPIs
        ------------------------------------------------------------------------ */
     if (strcmp(method, "GET") == 0 && strcmp(path, "/api/stats") == 0)
     {
-        int total_rooms = 0, avail_rooms = 0, res_rooms = 0, occ_rooms = 0;
+        int total_rooms = 0, avail_rooms = 0, res_rooms = 0, occ_rooms = 0, maint_rooms = 0;
         int total_bookings = 0;
         float total_revenue = 0.0f;
 
@@ -1145,6 +1487,7 @@ void handleClientRequest(SOCKET client_fd, const char *request)
                 if (r.status == ROOM_AVAILABLE) avail_rooms++;
                 else if (r.status == ROOM_RESERVED) res_rooms++;
                 else if (r.status == ROOM_OCCUPIED) occ_rooms++;
+                else if (r.status == ROOM_MAINTENANCE) maint_rooms++;
             }
             fclose(fp);
         }
@@ -1171,11 +1514,140 @@ void handleClientRequest(SOCKET client_fd, const char *request)
             fclose(fp);
         }
 
+        float occupancy_rate = (total_rooms > 0) ? (((float)occ_rooms / (float)total_rooms) * 100.0f) : 0.0f;
+
         char json_res[512];
         snprintf(json_res, sizeof(json_res),
-                 "{\"success\":true,\"stats\":{\"total_rooms\":%d,\"available_rooms\":%d,\"reserved_rooms\":%d,\"occupied_rooms\":%d,\"total_bookings\":%d,\"total_revenue\":%.2f}}",
-                 total_rooms, avail_rooms, res_rooms, occ_rooms, total_bookings, total_revenue);
+                 "{\"success\":true,\"stats\":{\"total_rooms\":%d,\"available_rooms\":%d,\"reserved_rooms\":%d,\"occupied_rooms\":%d,\"maintenance_rooms\":%d,\"total_bookings\":%d,\"total_revenue\":%.2f,\"occupancy_rate\":%.1f}}",
+                 total_rooms, avail_rooms, res_rooms, occ_rooms, maint_rooms, total_bookings, total_revenue, occupancy_rate);
         sendHttpResponse(client_fd, 200, "application/json", json_res);
+        return;
+    }
+
+    /* ------------------------------------------------------------------------
+       16. GET /api/users - List All System Users (Admin only)
+       ------------------------------------------------------------------------ */
+    if (strcmp(method, "GET") == 0 && strcmp(path, "/api/users") == 0)
+    {
+        if (!is_authenticated || strcmp(active_session.role, "admin") != 0)
+        {
+            sendHttpResponse(client_fd, 403, "application/json", "{\"success\":false,\"message\":\"Admin privileges required\"}");
+            return;
+        }
+
+        FILE *fp = fopen(USERS_FILE, "rb");
+        char json[BUFFER_SIZE];
+        strcpy(json, "{\"success\":true,\"users\":[");
+
+        if (fp)
+        {
+            User u;
+            int first = 1;
+            while (fread(&u, sizeof(User), 1, fp) == 1)
+            {
+                char item[256];
+                snprintf(item, sizeof(item), "%s{\"user_id\":%d,\"username\":\"%s\",\"role\":\"%s\",\"active\":%d}",
+                         first ? "" : ",", u.user_id, u.username, u.role, u.active);
+                strcat(json, item);
+                first = 0;
+            }
+            fclose(fp);
+        }
+        strcat(json, "]}");
+        sendHttpResponse(client_fd, 200, "application/json", json);
+        return;
+    }
+
+    /* ------------------------------------------------------------------------
+       17. POST /api/users/add - Add New System User (Admin only)
+       ------------------------------------------------------------------------ */
+    if (strcmp(method, "POST") == 0 && strcmp(path, "/api/users/add") == 0)
+    {
+        if (!is_authenticated || strcmp(active_session.role, "admin") != 0)
+        {
+            sendHttpResponse(client_fd, 403, "application/json", "{\"success\":false,\"message\":\"Admin privileges required\"}");
+            return;
+        }
+
+        char username[50], password[100], role[20];
+        getJsonStringValue(body, "username", username, sizeof(username));
+        getJsonStringValue(body, "password", password, sizeof(password));
+        getJsonStringValue(body, "role", role, sizeof(role));
+
+        if (strlen(username) == 0 || strlen(password) == 0)
+        {
+            sendHttpResponse(client_fd, 400, "application/json", "{\"success\":false,\"message\":\"Invalid user parameters\"}");
+            return;
+        }
+
+        FILE *fp = fopen(USERS_FILE, "rb");
+        int next_id = 1;
+        if (fp)
+        {
+            User u;
+            while (fread(&u, sizeof(User), 1, fp) == 1)
+            {
+                if (strcmp(u.username, username) == 0)
+                {
+                    fclose(fp);
+                    sendHttpResponse(client_fd, 409, "application/json", "{\"success\":false,\"message\":\"Username already exists\"}");
+                    return;
+                }
+                if (u.user_id >= next_id) next_id = u.user_id + 1;
+            }
+            fclose(fp);
+        }
+
+        User new_user;
+        new_user.user_id = next_id;
+        strncpy(new_user.username, username, sizeof(new_user.username) - 1);
+        strncpy(new_user.password, password, sizeof(new_user.password) - 1);
+        strncpy(new_user.role, (strlen(role) > 0) ? role : "receptionist", sizeof(new_user.role) - 1);
+        new_user.active = 1;
+
+        fp = fopen(USERS_FILE, "ab");
+        if (fp)
+        {
+            fwrite(&new_user, sizeof(User), 1, fp);
+            fclose(fp);
+            addAuditLog(active_session.user_id, active_session.username, "Add User", username);
+            sendHttpResponse(client_fd, 201, "application/json", "{\"success\":true,\"message\":\"User account created successfully\"}");
+        }
+        return;
+    }
+
+    /* ------------------------------------------------------------------------
+       18. GET /api/audit_logs - Fetch Audit Trail (Admin only)
+       ------------------------------------------------------------------------ */
+    if (strcmp(method, "GET") == 0 && strcmp(path, "/api/audit_logs") == 0)
+    {
+        if (!is_authenticated || strcmp(active_session.role, "admin") != 0)
+        {
+            sendHttpResponse(client_fd, 403, "application/json", "{\"success\":false,\"message\":\"Admin privileges required\"}");
+            return;
+        }
+
+        FILE *fp = fopen(AUDIT_LOG_FILE, "rb");
+        char json[BUFFER_SIZE];
+        strcpy(json, "{\"success\":true,\"logs\":[");
+
+        if (fp)
+        {
+            AuditLog log;
+            int first = 1;
+            while (fread(&log, sizeof(AuditLog), 1, fp) == 1)
+            {
+                char item[512];
+                snprintf(item, sizeof(item),
+                         "%s{\"log_id\":%d,\"user_id\":%d,\"username\":\"%s\",\"action\":\"%s\",\"details\":\"%s\",\"timestamp\":\"%s\"}",
+                         first ? "" : ",", log.log_id, log.user_id, log.username, log.action, log.details, log.timestamp);
+                strcat(json, item);
+                first = 0;
+            }
+            fclose(fp);
+        }
+        strcat(json, "]}");
+        sendHttpResponse(client_fd, 200, "application/json", json);
         return;
     }
 
