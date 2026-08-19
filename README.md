@@ -1,69 +1,129 @@
-# Hotel Room Reservation, Booking, Check-In & Billing Management System
+# Web-Based Hotel Management System
 
-A complete console-based **Hotel Management System** written in **C** using **binary file-based record processing** (`rooms.dat`, `bookings.dat`, `bills.dat`).
-
-Developed for **CSA0203 - C Programming** college course.
+An end-to-end **Hotel Room Reservation, Booking, Check-In, Check-Out, and Billing Management System** built with a **Pure C HTTP Server (`backend/hotel_server.c`)**, binary file persistence engine (`rooms.dat`, `bookings.dat`, `bills.dat`, `users.dat`, `audit_logs.dat`), and a modern luxury **HTML5/CSS3/Vanilla JavaScript Frontend**.
 
 ---
 
-## 🌟 Key Features
-
-* **Room Management**: Add new rooms, view tabular room lists, search by room number, update room status with safety warnings.
-* **Make Reservation**: Reserve available rooms, auto-generate unique Booking IDs (starting at `1001`), collect customer details with input validation (`days > 0`).
-* **Check-In**: Verify reservation status, transition room from `RESERVED` to `OCCUPIED`.
-* **Billing System**: Calculate room charges (`price × days`), add optional food & service charges, apply 10% tax, and store bill records in `bills.dat`.
-* **Check-Out**: Verify checked-in status, display/generate bill, update booking status to `CHECKED-OUT`, and release room back to `AVAILABLE`.
-* **Search & View Bookings**: View tabular booking records and comprehensive single-booking lookup.
-* **Cancel Reservation**: Cancel reservations prior to check-in and release room back to `AVAILABLE`.
-* **Binary File Persistence**: All room, booking, and billing data is saved to binary files and persists across application restarts.
-
----
-
-## 📁 Repository Structure
+## 🏛️ System Architecture Diagram
 
 ```text
-├── hotel_management.c   # Main C source code file
-└── README.md            # Documentation
+                        CLIENT WEB BROWSER
+             (HTML5 / CSS3 / Vanilla JS + Session Header)
+                                │
+                                │ HTTP GET / POST (Port 8080)
+                                ▼
+                     ┌─────────────────────┐
+                     │    C HTTP SERVER    │
+                     │  hotel_server.c     │
+                     ├─────────────────────┤
+                     │ Session Validator   │
+                     │ Role-Based Router   │
+                     │ Static File Server  │
+                     │ Audit Log Engine    │
+                     │ C Date & Tax Math   │
+                     └──────────┬──────────┘
+                                │
+   ┌───────────┬───────────┬────┴──────┬───────────┬───────────┐
+   ▼           ▼           ▼           ▼           ▼           ▼
+rooms.dat  bookings.dat bills.dat  users.dat   guests.dat audit_logs.dat
 ```
 
 ---
 
-## 🚀 How to Compile and Run
+## 🛠️ Data Flow
 
-### Prerequisites
-* Any standard C compiler (such as **GCC**, **Clang**, or **MSVC**).
-
-### Compilation (using GCC)
-```bash
-gcc -Wall -Wextra hotel_management.c -o hotel_management.exe
+### Customer Reservation Flow
+```text
+Browser Form ──► POST /api/bookings ──► C Date Math (Nights) ──► Write bookings.dat ──► Update rooms.dat (Reserved) ──► JSON Voucher
 ```
 
-### Running the Application
+### Guest Check-In & Billing Flow
+```text
+Check-In Modal ──► POST /api/checkin ──► Validate Status (Reserved) ──► Update rooms.dat (Occupied) ──► Audit Log
+Generate Bill ──► POST /api/bills ──► Compute Subtotal + 10% Tax ──► Save bills.dat ──► Audit Log
+Check-Out ──► POST /api/checkout ──► Verify Bill Exists ──► Release Room (Available) ──► Audit Log
+```
 
-**Windows (PowerShell / Command Prompt):**
+---
+
+## 📁 Repository Directory Structure
+
+```text
+Hotel Management System/
+│
+├── backend/
+│   ├── hotel_server.c      # Pure C socket HTTP server & REST controller
+│   ├── hotel_server.exe    # Compiled executable
+│   ├── rooms.dat           # Room inventory binary database
+│   ├── bookings.dat        # Booking records binary database
+│   ├── bills.dat          # Billing & payment records binary database
+│   ├── users.dat          # User account binary database
+│   └── audit_logs.dat     # Audit trail binary database
+│
+├── frontend/
+│   ├── index.html          # Customer homepage
+│   ├── rooms.html          # Room catalog
+│   ├── booking.html        # Customer booking form
+│   ├── booking-confirmation.html # Printable booking voucher
+│   ├── my-booking.html     # Customer booking lookup & cancellation
+│   ├── admin.html          # Staff & Admin management portal
+│   │
+│   ├── css/
+│   │   └── style.css       # Luxury dark theme stylesheet
+│   │
+│   └── js/
+│       ├── api.js          # Fetch API wrapper
+│       ├── main.js         # Homepage UI logic
+│       ├── booking.js      # Booking submission & lookup
+│       └── admin.js        # Staff portal & dashboard controllers
+│
+├── Makefile                # Cross-platform build script
+├── API_DOCUMENTATION.md    # Complete REST API reference
+├── USER_MANUAL.md          # Step-by-step user guide for Receptionists & Admins
+├── TESTING_REPORT.md       # Full test suite & verification report
+├── DEMO_GUIDE.md           # 5-10 minute presentation sequence
+└── VIVA_QUESTIONS.md       # 30+ Viva Voce questions & answers
+```
+
+---
+
+## 🚀 How to Compile & Run
+
+### 1. Build using Makefile
+- **Linux**:
+  ```bash
+  make
+  ```
+- **Windows (MinGW GCC)**:
+  ```powershell
+  make
+  ```
+
+### 2. Manual GCC Compilation
+- **Windows**:
+  ```powershell
+  gcc -Wall -Wextra backend/hotel_server.c -o backend/hotel_server.exe -lws2_32
+  ```
+
+### 3. Execution
 ```powershell
-.\hotel_management.exe
+.\backend\hotel_server.exe
 ```
-
-**Linux / macOS:**
-```bash
-./hotel_management.exe
-```
+Open **`http://127.0.0.1:8080`** in your browser.
 
 ---
 
-## 🔄 State Machine & Business Rules
+## 🔑 Demonstration Credentials
 
-```text
-Available ──► Reserved ──► Occupied ──► Available
-                 │
-                 └──► Cancelled ──► Available
-```
-
-* **Room Status**: `0 = Available`, `1 = Reserved`, `2 = Occupied`
-* **Booking Status**: `1 = Reserved`, `2 = Checked-In`, `3 = Checked-Out`, `4 = Cancelled`
+| Role | Username | Password | Privileges |
+| :--- | :--- | :--- | :--- |
+| **Administrator** | `admin` | `admin123` | Full access, User creation, Room creation, Room maintenance, Audit logs |
+| **Receptionist** | `reception` | `rec123` | Room catalog, Reservations, Guest check-in, Billing, Payments, Check-out |
 
 ---
 
-## 📜 License
-This project is open-source and intended for academic demonstration and learning.
+## 🔐 Security Considerations & Limitations
+
+- **Path Security**: Rejects path traversal attempts (`..`, `.dat`, `.c`, `.exe`, `/backend` access).
+- **Session Tokens**: Generates 64-character in-memory session tokens; checks roles on protected API routes.
+- **Academic Scope Note**: Demonstrations use plain-text password storage in binary files (`users.dat`) to adhere to standard C library constraints without third-party crypto dependencies.
