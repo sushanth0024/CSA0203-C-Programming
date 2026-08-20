@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staff & Admin Login - Grand Hotel</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- Navigation Header -->
+    <nav class="navbar">
+        <a href="index.html" class="brand">
+            <span>✨</span> GRAND HOTEL
+        </a>
+        <ul class="nav-links">
+            <li><a href="index.html">Home</a></li>
+            <li><a href="rooms.html">Rooms & Suites</a></li>
+            <li><a href="my-booking.html">My Booking</a></li>
+            <li><a href="staff-login.html" class="active admin-btn">Staff Portal</a></li>
+        </ul>
+    </nav>
+
+    <!-- Main Container -->
+    <main class="container">
+        <div class="voucher" style="max-width: 500px; border-top-color: var(--gold-primary);">
+            <div class="voucher-header" style="border-bottom: none; margin-bottom: 1rem; padding-bottom: 0;">
+                <span style="font-size: 3rem; color: var(--gold-primary);">🔐</span>
+                <h2 style="color: var(--text-white); font-size: 2.2rem; font-family: 'Cormorant Garamond', serif; margin-top: 0.5rem;">Staff & Admin Portal</h2>
+                <p style="color: var(--text-muted); font-size: 0.9rem;">Authorized access for Hotel Administrators & Receptionists.</p>
+            </div>
+
+            <div id="login-error" style="display: none; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; padding: 0.8rem; border-radius: 10px; margin-bottom: 1.5rem; text-align: center; font-size: 0.9rem;"></div>
+
+            <form onsubmit="executeStaffLogin(event)">
+                <div class="form-group" style="margin-bottom: 1.2rem;">
+                    <label for="staff_username">Staff Username</label>
+                    <input type="text" id="staff_username" class="form-control" placeholder="Enter username (e.g. admin or reception)" required autofocus>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 1.8rem;">
+                    <label for="staff_password">Password</label>
+                    <input type="password" id="staff_password" class="form-control" placeholder="Enter password" required>
+                </div>
+
+                <button type="submit" id="login-btn" class="btn-primary" style="margin-bottom: 1.5rem;">LOG IN TO PORTAL</button>
+
+                <div style="background: rgba(11, 15, 25, 0.6); padding: 1rem; border-radius: 10px; border: 1px solid var(--border-subtle); text-align: center; font-size: 0.85rem; color: var(--text-muted);">
+                    <div style="color: var(--gold-primary); font-weight: 700; margin-bottom: 0.4rem;">🔑 Demonstration Credentials</div>
+                    <div>Administrator: <strong>admin</strong> / <strong>admin123</strong></div>
+                    <div>Receptionist: <strong>reception</strong> / <strong>rec123</strong></div>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2026 <strong>Grand Hotel Management System</strong>. All rights reserved.</p>
+    </footer>
+
+    <script src="js/api.js"></script>
+    <script>
+        // Auto-redirect if already logged in
+        document.addEventListener('DOMContentLoaded', () => {
+            const user = API.getUser();
+            if (user) {
+                window.location.href = 'admin.html';
+            }
+        });
+
+        async function executeStaffLogin(event) {
+            event.preventDefault();
+            const errorDiv = document.getElementById('login-error');
+            const loginBtn = document.getElementById('login-btn');
+            errorDiv.style.display = 'none';
+
+            const user = document.getElementById('staff_username').value.trim();
+            const pass = document.getElementById('staff_password').value.trim();
+
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Authenticating...';
+
+            try {
+                const res = await API.login(user, pass);
+                if (res.success) {
+                    window.location.href = 'admin.html';
+                } else {
+                    errorDiv.textContent = res.message || 'Invalid username or password.';
+                    errorDiv.style.display = 'block';
+                    loginBtn.disabled = false;
+                    loginBtn.textContent = 'LOG IN TO PORTAL';
+                }
+            } catch (err) {
+                console.error(err);
+                errorDiv.textContent = 'Connection error. Ensure C backend server is running.';
+                errorDiv.style.display = 'block';
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'LOG IN TO PORTAL';
+            }
+        }
+    </script>
+</body>
+</html>

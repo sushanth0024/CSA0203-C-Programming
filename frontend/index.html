@@ -17,7 +17,7 @@
             <li><a href="index.html" class="active">Home</a></li>
             <li><a href="rooms.html">Rooms & Suites</a></li>
             <li><a href="my-booking.html">My Booking</a></li>
-            <li><a href="admin.html" class="admin-btn">Admin Portal</a></li>
+            <li><a href="staff-login.html" class="admin-btn">Staff Portal</a></li>
         </ul>
     </nav>
 
@@ -38,60 +38,33 @@
                 <input type="date" id="checkout" class="form-control">
             </div>
             <div class="form-group">
-                <label for="guests">Guests</label>
-                <select id="guests" class="form-control">
-                    <option value="1">1 Guest</option>
-                    <option value="2" selected>2 Guests</option>
-                    <option value="3">3 Guests</option>
-                    <option value="4">4 Guests</option>
+                <label for="room_type">Room Category</label>
+                <select id="room_type" class="form-control">
+                    <option value="All">All Categories</option>
+                    <option value="Single">Single Deluxe</option>
+                    <option value="Double">Double Suite</option>
+                    <option value="Deluxe">Executive Deluxe</option>
+                    <option value="Suite">Presidential Suite</option>
                 </select>
             </div>
-            <button onclick="handleSearchRooms()" class="btn-primary">CHECK AVAILABILITY</button>
+            <button onclick="searchAvailableRooms()" class="btn-primary">SEARCH ROOMS</button>
         </div>
     </header>
 
-    <!-- Hotel Amenities Section -->
-    <section class="container" style="padding-top: 3rem; padding-bottom: 2rem;">
-        <p class="section-subtitle">World-Class Amenities</p>
-        <h2 class="section-title">Designed For Ultimate Comfort</h2>
-
-        <div class="features-grid">
-            <div class="feature-box">
-                <span class="feature-icon">🏊‍♂️</span>
-                <h3 style="margin-bottom: 0.5rem; color: var(--text-white);">Infinity Pool</h3>
-                <p style="color: var(--text-muted); font-size: 0.9rem;">Rooftop temperature-controlled infinity pool with panoramic views.</p>
-            </div>
-            <div class="feature-box">
-                <span class="feature-icon">🍽️</span>
-                <h3 style="margin-bottom: 0.5rem; color: var(--text-white);">Fine Dining</h3>
-                <p style="color: var(--text-muted); font-size: 0.9rem;">Michelin-inspired international cuisine prepared by world-class chefs.</p>
-            </div>
-            <div class="feature-box">
-                <span class="feature-icon">💆‍♀️</span>
-                <h3 style="margin-bottom: 0.5rem; color: var(--text-white);">Wellness Spa</h3>
-                <p style="color: var(--text-muted); font-size: 0.9rem;">Holistic body treatments, sauna, and rejuvenating hydrotherapy massages.</p>
-            </div>
-            <div class="feature-box">
-                <span class="feature-icon">⚡</span>
-                <h3 style="margin-bottom: 0.5rem; color: var(--text-white);">C Backend Engine</h3>
-                <p style="color: var(--text-muted); font-size: 0.9rem;">Powered by binary record storage & standard socket HTTP networking in C.</p>
-            </div>
-        </div>
-    </section>
-
-    <!-- Available Accommodations Section -->
+    <!-- Main Container: Available Rooms Preview -->
     <main class="container">
-        <p class="section-subtitle">Exclusive Residences</p>
-        <h2 class="section-title">Available Luxury Accommodations</h2>
-        <div id="featured-rooms-grid" class="room-grid">
-            <p style="text-align: center; width: 100%; grid-column: 1/-1;">Loading available rooms from C server...</p>
+        <h2 class="section-title">Our Luxurious Accommodations</h2>
+        <div class="section-subtitle">HANDPICKED FOR UNPARALLELED ELEGANCE</div>
+
+        <div id="room-grid" class="room-grid">
+            <!-- Room cards rendered dynamically by main.js -->
+            <p style="text-align: center; grid-column: 1/-1; color: var(--text-muted);">Loading live room inventory...</p>
         </div>
     </main>
 
     <!-- Footer -->
     <footer>
         <p>&copy; 2026 <strong>Grand Hotel Management System</strong>. All rights reserved.</p>
-        <p style="font-size: 0.85rem; margin-top: 0.5rem; color: var(--text-muted);">Built for CSA0203 - C Programming Course | C Backend HTTP Server (Port 8080)</p>
     </footer>
 
     <script src="js/api.js"></script>

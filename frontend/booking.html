@@ -11,72 +11,74 @@
     <!-- Header Navigation -->
     <nav class="navbar">
         <a href="index.html" class="brand">
-            <span>🏨</span> GRAND HOTEL
+            <span>✨</span> GRAND HOTEL
         </a>
         <ul class="nav-links">
             <li><a href="index.html">Home</a></li>
-            <li><a href="rooms.html">Rooms</a></li>
+            <li><a href="rooms.html">Rooms & Suites</a></li>
             <li><a href="my-booking.html">My Booking</a></li>
-            <li><a href="admin.html" class="admin-btn">Admin Portal</a></li>
+            <li><a href="staff-login.html" class="admin-btn">Staff Portal</a></li>
         </ul>
     </nav>
 
     <!-- Main Container -->
     <main class="container">
-        <div class="voucher" style="border-top-color: var(--gold-accent);">
-            <h2 class="section-title" style="margin-bottom: 1rem;">Complete Your Reservation</h2>
-            
-            <div id="booking-error" style="display: none; background: #fee2e2; color: #b91c1c; padding: 0.8rem; border-radius: 8px; margin-bottom: 1.5rem; text-align: center;"></div>
+        <div class="voucher" style="max-width: 600px; border-top-color: var(--gold-primary);">
+            <div class="voucher-header">
+                <h2 style="color: var(--text-white); font-size: 2.2rem; font-family: 'Cormorant Garamond', serif;">Reservation Form</h2>
+                <p style="color: var(--text-muted); font-size: 0.9rem;">Fill in guest details below to confirm your stay</p>
+            </div>
 
-            <form id="booking-form" onsubmit="submitBooking(event)">
-                <div class="form-group" style="margin-bottom: 1rem;">
-                    <label for="select_room">Select Room</label>
-                    <select id="select_room" class="form-control" onchange="updateEstimatedCost()" required>
-                        <option value="">Loading available rooms...</option>
-                    </select>
+            <form onsubmit="handleBookingSubmit(event)">
+                <div class="form-group" style="margin-bottom: 1.2rem;">
+                    <label for="book_room_no">Selected Room</label>
+                    <input type="number" id="book_room_no" class="form-control" readonly required style="background: rgba(255,255,255,0.05); color: var(--gold-primary); font-weight: 700;">
                 </div>
 
-                <div class="form-group" style="margin-bottom: 1rem;">
-                    <label for="customer_name">Full Name</label>
-                    <input type="text" id="customer_name" class="form-control" placeholder="Enter your full name" required>
+                <div class="form-group" style="margin-bottom: 1.2rem;">
+                    <label for="book_name">Full Name</label>
+                    <input type="text" id="book_name" class="form-control" placeholder="Enter guest full name" required>
                 </div>
 
-                <div class="form-group" style="margin-bottom: 1rem;">
-                    <label for="phone">Phone Number</label>
-                    <input type="tel" id="phone" class="form-control" placeholder="e.g. 9876543210" required>
-                </div>
-
-                <div class="form-group" style="margin-bottom: 1rem;">
-                    <label for="email">Email Address</label>
-                    <input type="email" id="email" class="form-control" placeholder="e.g. user@example.com" required>
-                </div>
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.2rem;">
                     <div class="form-group">
-                        <label for="check_in_date">Check-In Date</label>
-                        <input type="date" id="check_in_date" class="form-control" onchange="updateEstimatedCost()" required>
+                        <label for="book_phone">Phone Number</label>
+                        <input type="tel" id="book_phone" class="form-control" placeholder="e.g. 9876543210" required>
                     </div>
                     <div class="form-group">
-                        <label for="check_out_date">Check-Out Date</label>
-                        <input type="date" id="check_out_date" class="form-control" onchange="updateEstimatedCost()" required>
+                        <label for="book_email">Email Address</label>
+                        <input type="email" id="book_email" class="form-control" placeholder="e.g. guest@example.com" required>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.2rem;">
+                    <div class="form-group">
+                        <label for="book_in_date">Check-In Date</label>
+                        <input type="date" id="book_in_date" class="form-control" required onchange="calculateEstimatedTotal()">
+                    </div>
+                    <div class="form-group">
+                        <label for="book_out_date">Check-Out Date</label>
+                        <input type="date" id="book_out_date" class="form-control" required onchange="calculateEstimatedTotal()">
                     </div>
                 </div>
 
                 <div class="form-group" style="margin-bottom: 1.5rem;">
-                    <label for="guests_count">Number of Guests</label>
-                    <select id="guests_count" class="form-control" required>
-                        <option value="1">1 Guest</option>
-                        <option value="2" selected>2 Guests</option>
-                        <option value="3">3 Guests</option>
-                        <option value="4">4 Guests</option>
-                    </select>
+                    <label for="book_guests">Number of Guests</label>
+                    <input type="number" id="book_guests" class="form-control" value="1" min="1" max="6" required>
                 </div>
 
-                <div id="cost-preview" style="background: #f1f5f9; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; font-weight: 600; text-align: center; color: var(--navy-dark);">
-                    Estimated Days: <span id="preview-days">0</span> | Total Estimated Cost: <span id="preview-total" style="color: var(--gold-accent);">₹0.00</span>
+                <div id="price-summary" style="background: rgba(11, 15, 25, 0.6); padding: 1.2rem; border-radius: 10px; border: 1px solid var(--border-subtle); margin-bottom: 1.8rem; display: none;">
+                    <div style="display: flex; justify-content: space-between; color: var(--text-muted); font-size: 0.9rem;">
+                        <span>Estimated Duration:</span>
+                        <strong id="summary-nights" style="color: var(--text-white);">0 nights</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; color: var(--gold-primary); font-size: 1.3rem; font-weight: 800; margin-top: 0.5rem;">
+                        <span>Estimated Room Charge:</span>
+                        <strong id="summary-total">₹0.00</strong>
+                    </div>
                 </div>
 
-                <button type="submit" id="submit-btn" class="btn-primary">CONFIRM BOOKING</button>
+                <button type="submit" class="btn-primary">CONFIRM RESERVATION</button>
             </form>
         </div>
     </main>

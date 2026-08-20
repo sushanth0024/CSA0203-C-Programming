@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin & Staff Portal - Grand Hotel</title>
+    <title>Management Portal - Grand Hotel</title>
     <link rel="stylesheet" href="css/style.css">
     <style>
         .admin-section {
@@ -71,7 +71,7 @@
             <li><a href="rooms.html">Rooms</a></li>
             <li><a href="my-booking.html">My Booking</a></li>
             <li><a href="admin.html" class="active admin-btn">Staff Portal</a></li>
-            <li id="auth-nav-item"><a href="#" onclick="openModal('modal-login')">Login</a></li>
+            <li id="auth-nav-item"><a href="#" onclick="handleStaffLogout()">Logout</a></li>
         </ul>
     </nav>
 
@@ -186,28 +186,6 @@
             </div>
         </div>
     </main>
-
-    <!-- MODAL: LOGIN -->
-    <div id="modal-login" class="modal-overlay">
-        <div class="modal-card">
-            <h3 style="margin-bottom: 0.5rem; color: var(--text-white); font-family: 'Cormorant Garamond', serif; font-size: 2rem;">Staff Login</h3>
-            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem;">Default Admin: <strong>admin / admin123</strong> | Receptionist: <strong>reception / rec123</strong></p>
-            <form onsubmit="handleStaffLogin(event)">
-                <div class="form-group" style="margin-bottom: 1rem;">
-                    <label for="login_user">Username</label>
-                    <input type="text" id="login_user" class="form-control" placeholder="Enter username" required>
-                </div>
-                <div class="form-group" style="margin-bottom: 1.5rem;">
-                    <label for="login_pass">Password</label>
-                    <input type="password" id="login_pass" class="form-control" placeholder="Enter password" required>
-                </div>
-                <div style="display: flex; gap: 1rem;">
-                    <button type="submit" class="btn-primary">AUTHENTICATE</button>
-                    <button type="button" onclick="closeModal('modal-login')" class="btn-primary" style="background: #475569;">CANCEL</button>
-                </div>
-            </form>
-        </div>
-    </div>
 
     <!-- MODAL: ADD ROOM -->
     <div id="modal-add-room" class="modal-overlay">

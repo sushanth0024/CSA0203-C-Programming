@@ -11,70 +11,63 @@
     <!-- Header Navigation -->
     <nav class="navbar">
         <a href="index.html" class="brand">
-            <span>🏨</span> GRAND HOTEL
+            <span>✨</span> GRAND HOTEL
         </a>
         <ul class="nav-links">
             <li><a href="index.html">Home</a></li>
-            <li><a href="rooms.html">Rooms</a></li>
+            <li><a href="rooms.html">Rooms & Suites</a></li>
             <li><a href="my-booking.html">My Booking</a></li>
-            <li><a href="admin.html" class="admin-btn">Admin Portal</a></li>
+            <li><a href="staff-login.html" class="admin-btn">Staff Portal</a></li>
         </ul>
     </nav>
 
     <!-- Main Container -->
     <main class="container">
-        <div class="voucher">
+        <div id="voucher-card" class="voucher">
             <div class="voucher-header">
-                <span style="font-size: 3rem; color: var(--success);">✓</span>
-                <h2 style="color: var(--navy-dark); font-size: 1.8rem; margin-top: 0.5rem;">BOOKING CONFIRMED</h2>
-                <p style="color: var(--text-muted);">Thank you for choosing Grand Hotel. Your reservation is secured.</p>
+                <span style="font-size: 3rem; color: #10b981;">🎉</span>
+                <h2 style="color: var(--text-white); font-size: 2.2rem; font-family: 'Cormorant Garamond', serif; margin-top: 0.5rem;">Booking Confirmed!</h2>
+                <p style="color: var(--gold-primary); font-weight: 700; font-size: 1.1rem;" id="v-booking-id">Booking ID: #----</p>
+                <p style="color: var(--text-muted); font-size: 0.85rem;">Please keep your Booking ID and Phone Number for check-in & lookup.</p>
             </div>
 
             <div class="voucher-row">
-                <span>Booking ID</span>
-                <strong id="voucher-id" style="color: var(--gold-accent);">1001</strong>
-            </div>
-            <div class="voucher-row">
                 <span>Guest Name</span>
-                <strong id="voucher-name">-</strong>
+                <strong id="v-guest-name">--</strong>
             </div>
             <div class="voucher-row">
                 <span>Phone Number</span>
-                <strong id="voucher-phone">-</strong>
+                <strong id="v-phone">--</strong>
             </div>
             <div class="voucher-row">
-                <span>Assigned Room</span>
-                <strong id="voucher-room">-</strong>
+                <span>Room Reserved</span>
+                <strong id="v-room">Room --</strong>
+            </div>
+            <div class="voucher-row">
+                <span>Room Type</span>
+                <strong id="v-room-type">--</strong>
             </div>
             <div class="voucher-row">
                 <span>Check-In Date</span>
-                <strong id="voucher-checkin">-</strong>
+                <strong id="v-in-date">--</strong>
             </div>
             <div class="voucher-row">
                 <span>Check-Out Date</span>
-                <strong id="voucher-checkout">-</strong>
+                <strong id="v-out-date">--</strong>
             </div>
             <div class="voucher-row">
                 <span>Duration</span>
-                <strong id="voucher-days">- days</strong>
-            </div>
-            <div class="voucher-row">
-                <span>Guests</span>
-                <strong id="voucher-guests">-</strong>
-            </div>
-            <div class="voucher-row">
-                <span>Booking Status</span>
-                <strong id="voucher-status" style="color: var(--gold-accent);">-</strong>
+                <strong id="v-days">-- nights</strong>
             </div>
 
             <div class="voucher-total">
-                <span>Estimated Room Charge</span>
-                <span id="voucher-total">₹0.00</span>
+                <span>Total Amount Due</span>
+                <span id="v-total">₹0.00</span>
             </div>
 
-            <div style="margin-top: 2rem; display: flex; gap: 1rem;">
-                <button onclick="window.print()" class="btn-primary" style="background: var(--navy-dark);">PRINT VOUCHER</button>
-                <a href="index.html" class="btn-primary" style="text-align: center; text-decoration: none;">BACK TO HOME</a>
+            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                <button onclick="window.print()" class="btn-primary" style="background: #1e293b; border: 1px solid var(--border-gold);">🖨️ PRINT VOUCHER</button>
+                <a href="index.html" class="btn-primary" style="text-align: center; text-decoration: none;">RETURN TO HOME</a>
             </div>
         </div>
     </main>
@@ -85,6 +78,25 @@
     </footer>
 
     <script src="js/api.js"></script>
-    <script src="js/booking.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const raw = localStorage.getItem('last_booking');
+            if (!raw) {
+                alert('No recent booking found.');
+                window.location.href = 'index.html';
+                return;
+            }
+            const b = JSON.parse(raw);
+            document.getElementById('v-booking-id').textContent = `Booking ID: #${b.booking_id}`;
+            document.getElementById('v-guest-name').textContent = b.customer_name;
+            document.getElementById('v-phone').textContent = b.phone;
+            document.getElementById('v-room').textContent = `Room ${b.room_no}`;
+            document.getElementById('v-room-type').textContent = b.room_type || 'Standard';
+            document.getElementById('v-in-date').textContent = b.check_in_date;
+            document.getElementById('v-out-date').textContent = b.check_out_date;
+            document.getElementById('v-days').textContent = `${b.days} nights`;
+            document.getElementById('v-total').textContent = `₹${b.room_charge ? b.room_charge.toFixed(2) : '0.00'}`;
+        });
+    </script>
 </body>
 </html>

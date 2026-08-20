@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Booking - Grand Hotel</title>
+    <title>Customer Reservation Lookup - Grand Hotel</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -11,80 +11,55 @@
     <!-- Header Navigation -->
     <nav class="navbar">
         <a href="index.html" class="brand">
-            <span>🏨</span> GRAND HOTEL
+            <span>✨</span> GRAND HOTEL
         </a>
         <ul class="nav-links">
             <li><a href="index.html">Home</a></li>
-            <li><a href="rooms.html">Rooms</a></li>
+            <li><a href="rooms.html">Rooms & Suites</a></li>
             <li><a href="my-booking.html" class="active">My Booking</a></li>
-            <li><a href="admin.html" class="admin-btn">Admin Portal</a></li>
+            <li><a href="staff-login.html" class="admin-btn">Staff Portal</a></li>
         </ul>
     </nav>
 
     <!-- Main Container -->
     <main class="container">
-        <div class="voucher" style="border-top-color: var(--navy-dark);">
-            <h2 class="section-title" style="margin-bottom: 1rem;">Retrieve Your Booking</h2>
-            <p style="text-align: center; color: var(--text-muted); margin-bottom: 2rem;">Enter your Booking ID and Phone Number for security verification.</p>
+        <div class="voucher" style="max-width: 650px; border-top-color: var(--gold-primary);">
+            <div class="voucher-header">
+                <span style="font-size: 3rem; color: var(--gold-primary);">🔍</span>
+                <h2 style="color: var(--text-white); font-size: 2.2rem; font-family: 'Cormorant Garamond', serif; margin-top: 0.5rem;">Customer Reservation Portal</h2>
+                <p style="color: var(--text-muted); font-size: 0.9rem;">Look up your reservation details or cancel a booking using your Booking ID and Phone Number.</p>
+            </div>
 
-            <div id="search-error" style="display: none; background: #fee2e2; color: #b91c1c; padding: 0.8rem; border-radius: 8px; margin-bottom: 1.5rem; text-align: center;"></div>
-
-            <form onsubmit="searchCustomerBooking(event)">
-                <div class="form-group" style="margin-bottom: 1rem;">
-                    <label for="lookup_id">Booking ID</label>
-                    <input type="number" id="lookup_id" class="form-control" placeholder="e.g. 1001" required>
+            <!-- Lookup Form -->
+            <form onsubmit="handleBookingLookup(event)" style="margin-bottom: 2rem;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.2rem;">
+                    <div class="form-group">
+                        <label for="lookup_id">Booking ID</label>
+                        <input type="number" id="lookup_id" class="form-control" placeholder="e.g. 1001" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="lookup_phone">Phone Number</label>
+                        <input type="tel" id="lookup_phone" class="form-control" placeholder="e.g. 9876543210" required>
+                    </div>
                 </div>
-
-                <div class="form-group" style="margin-bottom: 1.5rem;">
-                    <label for="lookup_phone">Phone Number</label>
-                    <input type="tel" id="lookup_phone" class="form-control" placeholder="e.g. 9876543210" required>
-                </div>
-
-                <button type="submit" class="btn-primary">LOOKUP BOOKING</button>
+                <button type="submit" class="btn-primary">FIND RESERVATION</button>
             </form>
 
-            <!-- Result Box -->
-            <div id="search-result" style="display: none; margin-top: 2.5rem; border-top: 2px dashed var(--border-color); padding-top: 1.5rem;">
-                <h3 style="color: var(--navy-dark); margin-bottom: 1rem; text-align: center;">Reservation Details</h3>
+            <!-- Results Card -->
+            <div id="booking-details-card" style="display: none; background: rgba(11, 15, 25, 0.7); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border-gold);">
+                <h3 style="color: var(--gold-primary); font-size: 1.4rem; margin-bottom: 1rem; border-bottom: 1px dashed var(--border-subtle); padding-bottom: 0.5rem;">Reservation Found</h3>
+                
+                <div class="voucher-row"><span>Booking ID</span><strong id="det-id">--</strong></div>
+                <div class="voucher-row"><span>Guest Name</span><strong id="det-name">--</strong></div>
+                <div class="voucher-row"><span>Phone Number</span><strong id="det-phone">--</strong></div>
+                <div class="voucher-row"><span>Room Assigned</span><strong id="det-room">--</strong></div>
+                <div class="voucher-row"><span>Check-In</span><strong id="det-in">--</strong></div>
+                <div class="voucher-row"><span>Check-Out</span><strong id="det-out">--</strong></div>
+                <div class="voucher-row"><span>Current Status</span><span id="det-status" class="badge">--</span></div>
 
-                <div class="voucher-row">
-                    <span>Booking ID</span>
-                    <strong id="lookup-id" style="color: var(--gold-accent);">-</strong>
+                <div style="display: flex; gap: 1rem; margin-top: 1.8rem;">
+                    <button id="cancel-btn" onclick="handleBookingCancel()" class="btn-primary" style="background: #ef4444;">CANCEL RESERVATION</button>
                 </div>
-                <div class="voucher-row">
-                    <span>Guest Name</span>
-                    <strong id="lookup-name">-</strong>
-                </div>
-                <div class="voucher-row">
-                    <span>Phone Number</span>
-                    <strong id="lookup-phone">-</strong>
-                </div>
-                <div class="voucher-row">
-                    <span>Room</span>
-                    <strong id="lookup-room">-</strong>
-                </div>
-                <div class="voucher-row">
-                    <span>Check-In</span>
-                    <strong id="lookup-checkin">-</strong>
-                </div>
-                <div class="voucher-row">
-                    <span>Check-Out</span>
-                    <strong id="lookup-checkout">-</strong>
-                </div>
-                <div class="voucher-row">
-                    <span>Duration</span>
-                    <strong id="lookup-days">- days</strong>
-                </div>
-                <div class="voucher-row">
-                    <span>Current Status</span>
-                    <span id="lookup-status-badge" class="badge">-</span>
-                </div>
-                <div class="voucher-total">
-                    <span>Total Cost</span>
-                    <span id="lookup-total">₹0.00</span>
-                </div>
-
-                <button id="cancel-res-btn" class="btn-primary" style="background-color: var(--danger); margin-top: 1.5rem; display: none;">CANCEL RESERVATION</button>
             </div>
         </div>
     </main>

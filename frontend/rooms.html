@@ -17,16 +17,21 @@
             <li><a href="index.html">Home</a></li>
             <li><a href="rooms.html" class="active">Rooms & Suites</a></li>
             <li><a href="my-booking.html">My Booking</a></li>
-            <li><a href="admin.html" class="admin-btn">Admin Portal</a></li>
+            <li><a href="staff-login.html" class="admin-btn">Staff Portal</a></li>
         </ul>
     </nav>
 
-    <!-- Main Container -->
+    <!-- Header Banner -->
+    <header class="hero" style="padding: 4rem 8% 3rem 8%;">
+        <span class="hero-tag">EXCLUSIVITY & ELEGANCE</span>
+        <h1>Explore Accommodations</h1>
+        <p>Browse our room selection. Real-time availability provided by pure C file persistence.</p>
+    </header>
+
+    <!-- Rooms Container -->
     <main class="container">
-        <p class="section-subtitle">Luxury Accommodations</p>
-        <h2 class="section-title">Rooms & Executive Suites</h2>
-        <div id="featured-rooms-grid" class="room-grid">
-            <p style="text-align: center; width: 100%; grid-column: 1/-1;">Loading rooms from C server...</p>
+        <div id="room-grid" class="room-grid">
+            <p style="text-align: center; grid-column: 1/-1; color: var(--text-muted);">Loading rooms...</p>
         </div>
     </main>
 

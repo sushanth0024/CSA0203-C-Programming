@@ -1,5 +1,5 @@
 /* ============================================================================
-   ADMIN & STAFF PORTAL HANDLERS - PHASE 4 (AUTH, RBAC, PAYMENTS, MAINTENANCE)
+   ADMIN & STAFF PORTAL HANDLERS - DEDICATED AUTH & RBAC
    ============================================================================ */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -14,7 +14,13 @@ function checkAuthState() {
     const authNavItem = document.getElementById('auth-nav-item');
     const adminElements = document.querySelectorAll('.admin-only');
 
-    if (user) {
+    if (!user) {
+        // Redirect unauthenticated visitors trying to open admin.html
+        if (window.location.pathname.includes('admin.html')) {
+            window.location.href = 'staff-login.html';
+            return;
+        }
+    } else {
         if (roleBadge) roleBadge.textContent = `[${user.role.toUpperCase()}]`;
         if (userDisplay) userDisplay.innerHTML = `Welcome, <strong>${user.username}</strong> (${user.role}) | <a href="#" onclick="handleStaffLogout()" style="color:#ef4444; text-decoration:none;">Logout</a>`;
         if (authNavItem) authNavItem.innerHTML = `<a href="#" onclick="handleStaffLogout()">Logout (${user.username})</a>`;
@@ -24,39 +30,13 @@ function checkAuthState() {
         } else {
             adminElements.forEach(el => el.style.display = '');
         }
-    } else {
-        if (roleBadge) roleBadge.textContent = '[STAFF PORTAL]';
-        if (userDisplay) userDisplay.innerHTML = `<a href="#" onclick="openModal('modal-login')" style="color:var(--gold-primary); text-decoration:none;">Click here to Login</a>`;
-        if (authNavItem) authNavItem.innerHTML = `<a href="#" onclick="openModal('modal-login')">Login</a>`;
-    }
-}
-
-async function handleStaffLogin(event) {
-    event.preventDefault();
-    const user = document.getElementById('login_user').value.trim();
-    const pass = document.getElementById('login_pass').value.trim();
-
-    try {
-        const res = await API.login(user, pass);
-        if (res.success) {
-            alert(`Login Successful! Welcome ${res.username} (${res.role}).`);
-            closeModal('modal-login');
-            checkAuthState();
-            loadAdminDashboard();
-        } else {
-            alert('Login Failed: ' + res.message);
-        }
-    } catch (err) {
-        console.error(err);
-        alert('Server login error.');
     }
 }
 
 async function handleStaffLogout() {
-    if (confirm('Are you sure you want to log out?')) {
+    if (confirm('Are you sure you want to log out of the Staff Portal?')) {
         await API.logout();
-        checkAuthState();
-        loadAdminDashboard();
+        window.location.href = 'staff-login.html';
     }
 }
 
@@ -76,14 +56,14 @@ async function loadKPIs() {
         const res = await API.getStats();
         if (res.success && res.stats) {
             const s = res.stats;
-            document.getElementById('kpi-total-rooms').textContent = s.total_rooms;
-            document.getElementById('kpi-avail-rooms').textContent = s.available_rooms;
-            document.getElementById('kpi-res-rooms').textContent = s.reserved_rooms;
-            document.getElementById('kpi-occ-rooms').textContent = s.occupied_rooms;
+            if (document.getElementById('kpi-total-rooms')) document.getElementById('kpi-total-rooms').textContent = s.total_rooms;
+            if (document.getElementById('kpi-avail-rooms')) document.getElementById('kpi-avail-rooms').textContent = s.available_rooms;
+            if (document.getElementById('kpi-res-rooms')) document.getElementById('kpi-res-rooms').textContent = s.reserved_rooms;
+            if (document.getElementById('kpi-occ-rooms')) document.getElementById('kpi-occ-rooms').textContent = s.occupied_rooms;
             if (document.getElementById('kpi-occupancy')) {
                 document.getElementById('kpi-occupancy').textContent = `${s.occupancy_rate ? s.occupancy_rate.toFixed(1) : 0}%`;
             }
-            document.getElementById('kpi-revenue').textContent = `₹${s.total_revenue.toFixed(2)}`;
+            if (document.getElementById('kpi-revenue')) document.getElementById('kpi-revenue').textContent = `₹${s.total_revenue.toFixed(2)}`;
         }
     } catch (err) {
         console.error("Failed to load KPIs:", err);
