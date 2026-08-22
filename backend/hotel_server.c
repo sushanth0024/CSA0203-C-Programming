@@ -829,17 +829,28 @@ void sendCorsResponse(SOCKET client_fd)
 /* Static File Host with Exact Path Traversal Protection */
 void serveStaticFile(SOCKET client_fd, const char *url_path)
 {
+    /* Strip query string parameters if present (e.g., /booking.html?room_no=201 -> /booking.html) */
+    char clean_url[256];
+    strncpy(clean_url, url_path, sizeof(clean_url) - 1);
+    clean_url[sizeof(clean_url) - 1] = '\0';
+
+    char *query_ptr = strchr(clean_url, '?');
+    if (query_ptr)
+    {
+        *query_ptr = '\0';
+    }
+
     /* Path Traversal & Directory Guard */
-    if (strstr(url_path, "..") != NULL ||
-        strstr(url_path, ".dat") != NULL ||
-        strncmp(url_path, "/backend", 8) == 0)
+    if (strstr(clean_url, "..") != NULL ||
+        strstr(clean_url, ".dat") != NULL ||
+        strncmp(clean_url, "/backend", 8) == 0)
     {
         sendHttpResponse(client_fd, 403, "application/json", "{\"success\":false,\"message\":\"Access Denied\"}");
         return;
     }
 
     /* Guard against serving source/executable files */
-    const char *dot = strrchr(url_path, '.');
+    const char *dot = strrchr(clean_url, '.');
     if (dot && (strcmp(dot, ".c") == 0 || strcmp(dot, ".exe") == 0 || strcmp(dot, ".o") == 0))
     {
         sendHttpResponse(client_fd, 403, "application/json", "{\"success\":false,\"message\":\"Access Denied\"}");
@@ -847,13 +858,13 @@ void serveStaticFile(SOCKET client_fd, const char *url_path)
     }
 
     char file_path[512];
-    if (strcmp(url_path, "/") == 0 || strcmp(url_path, "/index.html") == 0)
+    if (strcmp(clean_url, "/") == 0 || strcmp(clean_url, "/index.html") == 0)
     {
         snprintf(file_path, sizeof(file_path), "frontend/index.html");
     }
     else
     {
-        snprintf(file_path, sizeof(file_path), "frontend%s", url_path);
+        snprintf(file_path, sizeof(file_path), "frontend%s", clean_url);
     }
 
     FILE *fp = fopen(file_path, "rb");
