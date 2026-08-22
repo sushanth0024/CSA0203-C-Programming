@@ -28,13 +28,13 @@ function formatDateForInput(date) {
 }
 
 async function loadFeaturedRooms() {
-    const grid = document.getElementById('featured-rooms-grid');
+    const grid = document.getElementById('room-grid') || document.getElementById('featured-rooms-grid');
     if (!grid) return;
 
     try {
         const res = await API.getAvailableRooms();
         if (!res.success || !res.rooms || res.rooms.length === 0) {
-            grid.innerHTML = '<p style="text-align:center; grid-column: 1/-1;">No rooms currently available for reservation.</p>';
+            grid.innerHTML = '<p style="text-align:center; grid-column: 1/-1; color: var(--text-muted);">No rooms currently available for reservation.</p>';
             return;
         }
 
@@ -72,6 +72,6 @@ function getRoomImage(type) {
     }
 }
 
-function handleSearchRooms() {
+function searchAvailableRooms() {
     window.location.href = 'rooms.html';
 }

@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // If on booking-confirmation.html, load receipt details
-    if (document.getElementById('voucher-id')) {
+    if (document.getElementById('v-booking-id') || document.getElementById('voucher-id')) {
         loadBookingConfirmation();
     }
 });
@@ -26,13 +26,16 @@ async function initBookingForm() {
     const future = new Date();
     future.setDate(today.getDate() + 3);
 
-    document.getElementById('check_in_date').value = formatDateForInput(today);
-    document.getElementById('check_out_date').value = formatDateForInput(future);
+    const inInput = document.getElementById('check_in_date');
+    const outInput = document.getElementById('check_out_date');
+
+    if (inInput) inInput.value = formatDateForInput(today);
+    if (outInput) outInput.value = formatDateForInput(future);
 
     try {
         const res = await API.getAvailableRooms();
         if (!res.success || !res.rooms || res.rooms.length === 0) {
-            select.innerHTML = '<option value="">No rooms available</option>';
+            select.innerHTML = '<option value="">No available rooms for booking</option>';
             return;
         }
 
@@ -45,7 +48,7 @@ async function initBookingForm() {
         updateEstimatedCost();
     } catch (err) {
         console.error(err);
-        select.innerHTML = '<option value="">Error loading rooms</option>';
+        select.innerHTML = '<option value="">Error loading rooms from server</option>';
     }
 }
 
@@ -67,7 +70,7 @@ function updateEstimatedCost() {
     if (!previewDays || !previewTotal) return;
 
     if (!roomNo || !inDateStr || !outDateStr) {
-        previewDays.textContent = '0';
+        previewDays.textContent = '0 nights';
         previewTotal.textContent = '₹0.00';
         return;
     }
@@ -77,7 +80,7 @@ function updateEstimatedCost() {
     const diffTime = outDate - inDate;
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-    if (diffDays <= 0) {
+    if (isNaN(diffDays) || diffDays <= 0) {
         previewDays.textContent = 'Invalid Dates';
         previewTotal.textContent = '₹0.00';
         return;
@@ -87,7 +90,7 @@ function updateEstimatedCost() {
     const price = room ? room.price : 0;
     const total = price * diffDays;
 
-    previewDays.textContent = diffDays;
+    previewDays.textContent = `${diffDays} nights`;
     previewTotal.textContent = `₹${total.toFixed(2)}`;
 }
 
@@ -95,7 +98,7 @@ async function submitBooking(event) {
     event.preventDefault();
     const errorDiv = document.getElementById('booking-error');
     const submitBtn = document.getElementById('submit-btn');
-    errorDiv.style.display = 'none';
+    if (errorDiv) errorDiv.style.display = 'none';
 
     const room_no = parseInt(document.getElementById('select_room').value);
     const customer_name = document.getElementById('customer_name').value.trim();
@@ -106,13 +109,17 @@ async function submitBooking(event) {
     const guests = parseInt(document.getElementById('guests_count').value);
 
     if (!room_no || !customer_name || !phone || !check_in_date || !check_out_date) {
-        errorDiv.textContent = 'Please fill in all required fields.';
-        errorDiv.style.display = 'block';
+        if (errorDiv) {
+            errorDiv.textContent = 'Please fill in all required fields.';
+            errorDiv.style.display = 'block';
+        }
         return;
     }
 
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'Processing Booking...';
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Processing Booking...';
+    }
 
     try {
         const payload = {
@@ -127,20 +134,38 @@ async function submitBooking(event) {
 
         const res = await API.createBooking(payload);
         if (res.success) {
-            // Redirect to voucher confirmation page
+            localStorage.setItem('last_booking', JSON.stringify({
+                booking_id: res.booking_id,
+                customer_name,
+                phone,
+                room_no,
+                room_type: res.room_type || 'Deluxe',
+                days: res.days,
+                check_in_date,
+                check_out_date,
+                room_charge: res.room_charge
+            }));
             window.location.href = `booking-confirmation.html?booking_id=${res.booking_id}&phone=${encodeURIComponent(phone)}`;
         } else {
-            errorDiv.textContent = res.message || 'Failed to complete booking.';
-            errorDiv.style.display = 'block';
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'CONFIRM BOOKING';
+            if (errorDiv) {
+                errorDiv.textContent = res.message || 'Failed to complete booking.';
+                errorDiv.style.display = 'block';
+            }
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'CONFIRM RESERVATION';
+            }
         }
     } catch (err) {
         console.error(err);
-        errorDiv.textContent = 'Server connection error. Please ensure C server is running on http://127.0.0.1:8080.';
-        errorDiv.style.display = 'block';
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'CONFIRM BOOKING';
+        if (errorDiv) {
+            errorDiv.textContent = 'Server connection error. Please ensure C server is running on http://127.0.0.1:8080.';
+            errorDiv.style.display = 'block';
+        }
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'CONFIRM RESERVATION';
+        }
     }
 }
 
@@ -149,106 +174,90 @@ async function loadBookingConfirmation() {
     const bookingId = urlParams.get('booking_id');
     const phone = urlParams.get('phone');
 
-    if (!bookingId || !phone) {
-        alert('Invalid voucher request.');
-        window.location.href = 'index.html';
-        return;
-    }
-
-    try {
-        const res = await API.lookupBooking(bookingId, phone);
-        if (!res.success || !res.booking) {
-            alert('Booking voucher not found.');
-            window.location.href = 'index.html';
-            return;
+    if (bookingId && phone) {
+        try {
+            const res = await API.lookupBooking(bookingId, phone);
+            if (res.success && res.booking) {
+                const b = res.booking;
+                if (document.getElementById('v-booking-id')) document.getElementById('v-booking-id').textContent = `Booking ID: #${b.booking_id}`;
+                if (document.getElementById('v-guest-name')) document.getElementById('v-guest-name').textContent = b.customer_name;
+                if (document.getElementById('v-phone')) document.getElementById('v-phone').textContent = b.phone;
+                if (document.getElementById('v-room')) document.getElementById('v-room').textContent = `Room ${b.room_no}`;
+                if (document.getElementById('v-room-type')) document.getElementById('v-room-type').textContent = b.room_type || 'Standard';
+                if (document.getElementById('v-in-date')) document.getElementById('v-in-date').textContent = b.check_in;
+                if (document.getElementById('v-out-date')) document.getElementById('v-out-date').textContent = b.check_out;
+                if (document.getElementById('v-days')) document.getElementById('v-days').textContent = `${b.days} nights`;
+                if (document.getElementById('v-total')) document.getElementById('v-total').textContent = `₹${b.total_billed ? b.total_billed.toFixed(2) : '0.00'}`;
+            }
+        } catch (err) {
+            console.error("Lookup voucher error:", err);
         }
-
-        const b = res.booking;
-        document.getElementById('voucher-id').textContent = b.booking_id;
-        document.getElementById('voucher-name').textContent = b.customer_name;
-        document.getElementById('voucher-phone').textContent = b.phone;
-        document.getElementById('voucher-room').textContent = `Room ${b.room_no} (${b.room_type})`;
-        document.getElementById('voucher-checkin').textContent = b.check_in;
-        document.getElementById('voucher-checkout').textContent = b.check_out;
-        document.getElementById('voucher-days').textContent = b.days;
-        document.getElementById('voucher-guests').textContent = b.guests;
-        document.getElementById('voucher-total').textContent = `₹${b.total_billed.toFixed(2)}`;
-        document.getElementById('voucher-status').textContent = b.status_str;
-    } catch (err) {
-        console.error(err);
-        alert('Error retrieving voucher from C backend server.');
     }
 }
 
-async function searchCustomerBooking(event) {
+async function handleBookingLookup(event) {
     event.preventDefault();
-    const resultDiv = document.getElementById('search-result');
-    const errorDiv = document.getElementById('search-error');
-    errorDiv.style.display = 'none';
-    resultDiv.style.display = 'none';
-
     const bookingId = document.getElementById('lookup_id').value.trim();
     const phone = document.getElementById('lookup_phone').value.trim();
 
     if (!bookingId || !phone) {
-        errorDiv.textContent = 'Please enter both Booking ID and Phone Number.';
-        errorDiv.style.display = 'block';
+        alert('Please enter both Booking ID and Phone Number.');
         return;
     }
 
     try {
         const res = await API.lookupBooking(bookingId, phone);
-        if (!res.success || !res.booking) {
-            errorDiv.textContent = res.message || 'No matching booking found.';
-            errorDiv.style.display = 'block';
-            return;
-        }
+        if (res.success && res.booking) {
+            const b = res.booking;
+            document.getElementById('det-id').textContent = `#${b.booking_id}`;
+            document.getElementById('det-name').textContent = b.customer_name;
+            document.getElementById('det-phone').textContent = b.phone;
+            document.getElementById('det-room').textContent = `Room ${b.room_no} (${b.room_type || 'Standard'})`;
+            document.getElementById('det-in').textContent = b.check_in;
+            document.getElementById('det-out').textContent = b.check_out;
 
-        const b = res.booking;
-        document.getElementById('lookup-id').textContent = b.booking_id;
-        document.getElementById('lookup-name').textContent = b.customer_name;
-        document.getElementById('lookup-phone').textContent = b.phone;
-        document.getElementById('lookup-room').textContent = `Room ${b.room_no} (${b.room_type})`;
-        document.getElementById('lookup-checkin').textContent = b.check_in;
-        document.getElementById('lookup-checkout').textContent = b.check_out;
-        document.getElementById('lookup-days').textContent = b.days;
-        document.getElementById('lookup-total').textContent = `₹${b.total_billed.toFixed(2)}`;
+            const badge = document.getElementById('det-status');
+            if (badge) {
+                badge.textContent = b.status_str;
+                badge.className = `badge badge-${b.status_str.toLowerCase().replace('-', '')}`;
+            }
 
-        const badgeSpan = document.getElementById('lookup-status-badge');
-        badgeSpan.textContent = b.status_str;
-        badgeSpan.className = `badge badge-${b.status_str.toLowerCase().replace('-', '')}`;
+            const card = document.getElementById('booking-details-card');
+            if (card) card.style.display = 'block';
 
-        const cancelBtn = document.getElementById('cancel-res-btn');
-        if (b.status === 1) { // Reserved
-            cancelBtn.style.display = 'block';
-            cancelBtn.onclick = () => performCancellation(b.booking_id, b.phone);
+            const cancelBtn = document.getElementById('cancel-btn');
+            if (cancelBtn) {
+                if (b.status === 1) { // Reserved
+                    cancelBtn.style.display = 'block';
+                } else {
+                    cancelBtn.style.display = 'none';
+                }
+            }
         } else {
-            cancelBtn.style.display = 'none';
+            alert(res.message || 'No matching reservation found.');
         }
-
-        resultDiv.style.display = 'block';
     } catch (err) {
         console.error(err);
-        errorDiv.textContent = 'Failed to connect to C backend server.';
-        errorDiv.style.display = 'block';
+        alert('Error communicating with C backend server.');
     }
 }
 
-async function performCancellation(bookingId, phone) {
-    if (!confirm(`Are you sure you want to cancel Reservation ID ${bookingId}?`)) {
+async function handleBookingCancel() {
+    const bookingId = document.getElementById('lookup_id').value.trim();
+    const phone = document.getElementById('lookup_phone').value.trim();
+
+    if (!confirm(`Are you sure you want to cancel Reservation #${bookingId}?`)) {
         return;
     }
 
     try {
         const res = await API.cancelBooking(bookingId, phone);
+        alert(res.message);
         if (res.success) {
-            alert('Reservation cancelled successfully! Room is now Available.');
             window.location.reload();
-        } else {
-            alert('Cancellation failed: ' + res.message);
         }
     } catch (err) {
         console.error(err);
-        alert('Error communicating with C backend server.');
+        alert('Error cancelling booking.');
     }
 }
